@@ -1,6 +1,6 @@
 # Usage (run from the installation/ folder, or via ./docker-up.sh from anywhere):
 #   Web mode (default):  docker compose up
-#   GUI mode (Linux):    docker compose --profile gui up
+#   GUI mode (Linux):    docker compose --profile gui up app-gui
 #
 # NOTE: this file lives in installation/, but the Dockerfile's `COPY . .`
 # needs to see the whole project (core/, gui/, web/, main.py, utils.py), so
@@ -24,7 +24,7 @@ services:
     restart: unless-stopped
 
   # ── GUI mode (Linux with X11 forwarding) ──────────────────────────────────
-  # docker compose --profile gui up
+  # docker compose --profile gui up app-gui
   app-gui:
     build:
       context: ..

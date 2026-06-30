@@ -173,7 +173,7 @@ Then open http://localhost:<that port> in your browser.
 ```bash
 xhost +local:docker          # allow Docker to use your display
 cd installation
-docker compose --profile gui up
+docker compose --profile gui up app-gui
 ```
 Or, from the repo root: `./installation/docker-up.sh --gui`
 

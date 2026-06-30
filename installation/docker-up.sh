@@ -46,7 +46,7 @@ git -C "$REPO_ROOT" pull --ff-only
 if [ "$GUI_MODE" = true ]; then
     echo "Starting ReceiptVault in GUI mode (Docker, Linux/X11)..."
     xhost +local:docker 2>/dev/null || true
-    exec docker compose --profile gui up --build "${EXTRA_ARGS[@]}"
+    exec docker compose --profile gui up --build app-gui "${EXTRA_ARGS[@]}"
 fi
 
 echo "======================================"
