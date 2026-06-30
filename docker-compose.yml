@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Usage:
 #   Web mode (default):  docker compose up
 #   GUI mode (Linux):    docker compose --profile gui up
@@ -11,9 +9,9 @@ services:
     build: .
     image: receipt-vault:latest
     container_name: receipt_vault_web
-    command: python main.py --web --host 0.0.0.0 --no-browser
+    command: ["python", "main.py", "--web", "--host", "0.0.0.0", "--no-browser"]
     ports:
-      - "7000:7000"
+      - "7000"
     volumes:
       - ./data:/app/data    # persist your database outside the container
     restart: unless-stopped
@@ -25,7 +23,7 @@ services:
     image: receipt-vault:latest
     container_name: receipt_vault_gui
     profiles: ["gui"]
-    command: python main.py --gui
+    command: ["python", "main.py", "--gui"]
     environment:
       - DISPLAY=${DISPLAY}
     volumes:
