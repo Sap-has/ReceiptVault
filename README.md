@@ -29,12 +29,12 @@ ReceiptVault is a **local, privacy-first** receipt-tracking application. It runs
 
 | Operating System | Web Mode | GUI Mode | Launch Script |
 |---|---|---|---|
-| Windows 10 / 11 | ✅ | ✅ | `run_app.bat` |
-| macOS 12+ | ✅ | ✅ | `update_and_run.command` |
-| Linux (with desktop) | ✅ | ✅ | `update_and_run.sh` |
-| Linux (headless / server) | ✅ | ❌ | `update_and_run.sh` (auto web) |
-| ChromeOS (Crostini) | ✅ | ❌ | `update_and_run.sh` (auto web) |
-| Docker | ✅ (default) | ✅ (Linux X11) | `./docker-up.sh` (or `docker compose up`) |
+| Windows 10 / 11 | ✅ | ✅ | `installation/run_app.bat` |
+| macOS 12+ | ✅ | ✅ | `installation/update_and_run.command` |
+| Linux (with desktop) | ✅ | ✅ | `installation/update_and_run.sh` |
+| Linux (headless / server) | ✅ | ❌ | `installation/update_and_run.sh` (auto web) |
+| ChromeOS (Crostini) | ✅ | ❌ | `installation/update_and_run.sh` (auto web) |
+| Docker | ✅ (default) | ✅ (Linux X11) | `./installation/docker-up.sh` (or `docker compose up` from inside `installation/`) |
 
 > **Web Mode** opens ReceiptVault in your default browser. It picks the first free port starting at 7000 automatically and tells you which one it used, so it works even if something else on your machine is already using 7000. It works on every OS and is the recommended choice for most users. 
 > **GUI Mode** opens a native desktop window using CustomTkinter. It requires a graphical desktop environment (not available on ChromeOS or headless Linux).
@@ -90,16 +90,18 @@ sudo apt install -y python3 python3-venv python3-pip git
 Open a terminal (or Git Bash on Windows) and clone the repository:
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/ReceiptVault.git
+git clone https://github.com/Sap-has/ReceiptVault.git
 cd ReceiptVault
 ```
 
 > If you don't have Git, you can also click **Code → Download ZIP** on the GitHub page and extract the folder.
 
+All of the installation/launch tooling (Dockerfile, docker-compose.yml, docker-up.sh, requirements.txt, run_app.bat, update_and_run.command, update_and_run.sh) lives inside the `installation/` subfolder to keep the project root focused on the application code itself (`main.py`, `core/`, `gui/`, `web/`, `utils.py`). The launch scripts below all account for this automatically — they locate the repo root themselves, so you can run them either from inside `installation/` or by pointing at them from the repo root (e.g. `./installation/update_and_run.sh`).
+
 ### Step 2 – Make scripts executable (macOS / Linux only)
 
 ```bash
-chmod +x update_and_run.sh update_and_run.command docker-up.sh
+chmod +x installation/update_and_run.sh installation/update_and_run.command installation/docker-up.sh
 ```
 
 That's it. The launch scripts handle everything else (virtual environment, dependency installation) automatically on first run.
@@ -110,17 +112,17 @@ That's it. The launch scripts handle everything else (virtual environment, depen
 
 ### Windows
 
-Double-click `run_app.bat` **or** run it from a terminal:
+Double-click `installation\run_app.bat` **or** run it from a terminal:
 
 ```cmd
-run_app.bat
+installation\run_app.bat
 ```
 
 You will be asked to choose **Web Mode** or **GUI Mode** each time you launch.
 
 ### macOS
 
-Double-click `update_and_run.command` in Finder.
+Double-click `update_and_run.command` inside the `installation/` folder in Finder.
 
 > The first time you open it, macOS may show a security warning ("can't be opened because it's from an unidentified developer"). Right-click → **Open** → **Open** to bypass this. You won't need to do it again.
 
@@ -129,7 +131,7 @@ You will be asked to choose **Web Mode** or **GUI Mode** each time you launch.
 ### Linux
 
 ```bash
-./update_and_run.sh
+./installation/update_and_run.sh
 ```
 
 - **If a graphical desktop is detected**, you will be asked to choose Web Mode or GUI Mode.
@@ -141,7 +143,7 @@ Open the Linux terminal and run:
 
 ```bash
 cd ~/ReceiptVault      # or wherever you cloned it
-./update_and_run.sh
+./installation/update_and_run.sh
 ```
 
 Web Mode starts automatically. The script detects ChromeOS and skips the mode prompt. Your default browser will open to the URL printed in the terminal (http://127.0.0.1:7000 unless that port is already in use, in which case the next free one is used instead).
@@ -150,16 +152,17 @@ Web Mode starts automatically. The script detects ChromeOS and skips the mode pr
 
 **Web mode** (recommended, and the default — see below):
 ```bash
-./docker-up.sh
+./installation/docker-up.sh
 ```
-This builds the image, starts the container, and prints the URL to open — including the actual port, which is chosen automatically so it won't clash with anything else already using 7000 on your machine.
+This builds the image, starts the container, and prints the URL to open — including the actual port, which is chosen automatically so it won't clash with anything else already using 7000 on your machine. (`docker-up.sh` automatically moves into `installation/` itself before running, so this works whether you run it from the repo root as shown above or from inside `installation/` directly.)
 
-You can also use plain Compose:
+You can also use plain Compose — since `docker-compose.yml` lives in `installation/`, `cd` there first:
 ```bash
+cd installation
 docker compose up
 ```
 
-`docker compose up` always starts web mode by default — the GUI service is only included when you explicitly ask for it (see below), so a bare `docker compose up` never starts the GUI by accident. With plain Compose you'll need to look up the assigned port yourself once it's running:
+`docker compose up` always starts web mode by default — the GUI service is only included when you explicitly ask for it (see below), so a bare `docker compose up` never starts the GUI by accident. With plain Compose you'll need to look up the assigned port yourself once it's running (still from inside `installation/`):
 ```bash
 docker compose ps              # look in the PORTS column, e.g. 0.0.0.0:54827->7000/tcp
 docker compose port app 7000   # prints just the host port
@@ -169,13 +172,16 @@ Then open http://localhost:<that port> in your browser.
 **GUI mode** (Linux with X11 only):
 ```bash
 xhost +local:docker          # allow Docker to use your display
+cd installation
 docker compose --profile gui up
 ```
-Or: `./docker-up.sh --gui`
+Or, from the repo root: `./installation/docker-up.sh --gui`
 
 **One-off run without Compose:**
+
+Run this from the **repo root** (not from inside `installation/`) — the Dockerfile's `COPY . .` needs to see the whole project (`core/`, `gui/`, `web/`, `main.py`, etc.), so the build context has to be the root even though the Dockerfile itself now lives in `installation/`:
 ```bash
-docker build -t receipt-vault .
+docker build -f installation/Dockerfile -t receipt-vault .
 docker run --name receipt-vault -p 7000 -v "$(pwd)/data:/app/data" receipt-vault
 docker port receipt-vault 7000   # find out which host port got assigned
 ```
@@ -289,7 +295,7 @@ Make sure Python 3.11+ is installed and on your PATH. On Windows, reinstall Pyth
 ### "Permission denied" when running the script (macOS / Linux)
 
 ```bash
-chmod +x update_and_run.sh update_and_run.command docker-up.sh
+chmod +x installation/update_and_run.sh installation/update_and_run.command installation/docker-up.sh
 ```
 
 ### The browser opens but shows "This site can't be reached"
@@ -323,7 +329,7 @@ If you see an error that no free port could be found at all (unlikely — it sca
 
 ### After an update the app shows an error
 
-Run `pip install -r requirements.txt` inside the virtual environment (the launch script does this automatically). If the problem continues, delete the `venv/` folder and re-run the launch script.
+Run `pip install -r installation/requirements.txt` inside the virtual environment (the launch script does this automatically). If the problem continues, delete the `venv/` folder and re-run the launch script.
 
 ---
 

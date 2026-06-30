@@ -1,0 +1,20 @@
+/* ReceiptVault – base styles
+   Extracted from the inline <style> block that used to live in
+   web/server.py's index() route. Add page-specific stylesheets alongside
+   this one as the UI grows (e.g. static/css/dashboard.css), and link them
+   from individual templates as needed. */
+
+body {
+    font-family: system-ui, sans-serif;
+    max-width: 640px;
+    margin: 80px auto;
+    padding: 0 1rem;
+}
+
+h1 {
+    color: #2563eb;
+}
+
+a {
+    color: #2563eb;
+}

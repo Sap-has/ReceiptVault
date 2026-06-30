@@ -10,7 +10,16 @@
 #   ./docker-up.sh              # web mode (default), builds + starts + follows logs
 #   ./docker-up.sh --gui        # GUI mode (Linux with X11 only)
 #   ./docker-up.sh -d           # web mode, builds + starts, then exits without following logs
+#
+# This script lives in installation/ alongside docker-compose.yml, but can be
+# run from anywhere (e.g. `./installation/docker-up.sh` from the repo root) -
+# it moves itself into its own folder first so `docker compose` reliably
+# finds docker-compose.yml no matter where you called it from.
 set -euo pipefail
+
+# Move to the directory containing this script so docker compose finds
+# docker-compose.yml regardless of the caller's current working directory.
+cd "$(dirname "$0")"
 
 GUI_MODE=false
 DETACHED=false

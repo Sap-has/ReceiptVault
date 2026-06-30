@@ -53,7 +53,7 @@ def run_web(host: str = "127.0.0.1", port: int | None = None, open_browser: bool
     will raise its normal error if it's already taken.
     """
     try:
-        from flask import Flask, jsonify, request as flask_request
+        from flask import Flask, jsonify, render_template, request as flask_request
     except ImportError:
         print(
             "\n[ERROR] Flask is not installed. Run:  pip install flask\n"
@@ -77,7 +77,10 @@ def run_web(host: str = "127.0.0.1", port: int | None = None, open_browser: bool
     vault = ReceiptVault()
     vault.init_db()
 
-    flask_app = Flask(__name__, static_folder="web/static", template_folder="web/templates")
+    # static_folder / template_folder are resolved relative to this package's
+    # own directory (web/, since that's where server.py lives) — so "static"
+    # and "templates" here correctly point at web/static and web/templates.
+    flask_app = Flask(__name__, static_folder="static", template_folder="templates")
 
     # ------------------------------------------------------------------
     # Routes
@@ -85,53 +88,19 @@ def run_web(host: str = "127.0.0.1", port: int | None = None, open_browser: bool
 
     @flask_app.route("/")
     def index():
-        # Serve a minimal landing page until you add real templates
-        return """<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ReceiptVault</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 80px auto; padding: 0 1rem; }
-    h1   { color: #2563eb; }
-    a    { color: #2563eb; }
-  </style>
-</head>
-<body>
-  <h1>📄 ReceiptVault</h1>
-  <p>The web interface is running. Your data is stored locally in <code>data/bills_data.db</code>.</p>
-  <ul>
-    <li><a href="/api/bills">GET /api/bills</a> – list all bills (JSON)</li>
-    <li><a href="/api/vendors">GET /api/vendors</a> – list all vendors (JSON)</li>
-    <li><a href="/api/categories">GET /api/categories</a> – list all categories (JSON)</li>
-    <li>POST /api/update – pull latest code from GitHub and restart</li>
-  </ul>
-</body>
-</html>"""
+        return render_template("index.html")
 
     @flask_app.route("/api/bills")
     def api_bills():
-        rows = vault.conn.execute("""
-            SELECT b.id, b.date, v.name AS vendor, b.price, b.created_at, b.updated_at
-            FROM   bills b
-            LEFT JOIN vendors v ON b.vendor_id = v.id
-            ORDER BY b.date DESC
-        """).fetchall()
-        cols = ["id", "date", "vendor", "price", "created_at", "updated_at"]
-        return jsonify([dict(zip(cols, r)) for r in rows])
+        return jsonify(vault.get_all_bills())
 
     @flask_app.route("/api/vendors")
     def api_vendors():
-        rows = vault.conn.execute("SELECT id, name FROM vendors ORDER BY name").fetchall()
-        return jsonify([{"id": r[0], "name": r[1]} for r in rows])
+        return jsonify(vault.get_all_vendors())
 
     @flask_app.route("/api/categories")
     def api_categories():
-        rows = vault.conn.execute(
-            "SELECT id, category_name FROM categories ORDER BY category_name"
-        ).fetchall()
-        return jsonify([{"id": r[0], "category_name": r[1]} for r in rows])
+        return jsonify(vault.get_all_categories())
 
     @flask_app.route("/api/update", methods=["POST"])
     def api_update():

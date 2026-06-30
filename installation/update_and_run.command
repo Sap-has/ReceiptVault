@@ -3,8 +3,12 @@
 # On first run macOS may prompt "Allow access" – click OK.
 set -euo pipefail
 
-# Move to the directory containing this script so relative paths work
-cd "$(dirname "$0")"
+# This script lives in installation/. The app itself (main.py, gui/, web/,
+# core/, utils.py) lives one level up, at the repo root - move there so
+# git pull, venv, and main.py all resolve correctly, regardless of how this
+# script was launched.
+INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$INSTALL_DIR/.."
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 1.  Auto-update
@@ -54,7 +58,7 @@ fi
 # shellcheck disable=SC1091
 source venv/bin/activate
 echo "Installing / verifying dependencies..."
-pip install -r requirements.txt --quiet
+pip install -r "$INSTALL_DIR/requirements.txt" --quiet
 echo ""
 
 # ─────────────────────────────────────────────────────────────────────────────

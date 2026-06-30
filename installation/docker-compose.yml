@@ -1,25 +1,34 @@
-# Usage:
+# Usage (run from the installation/ folder, or via ./docker-up.sh from anywhere):
 #   Web mode (default):  docker compose up
 #   GUI mode (Linux):    docker compose --profile gui up
+#
+# NOTE: this file lives in installation/, but the Dockerfile's `COPY . .`
+# needs to see the whole project (core/, gui/, web/, main.py, utils.py), so
+# the build context below points one level up at the repo root (..), with
+# the Dockerfile itself found inside this same installation/ folder.
 
 services:
 
   # ── Web mode ──────────────────────────────────────────────────────────────
   app:
-    build: .
+    build:
+      context: ..
+      dockerfile: installation/Dockerfile
     image: receipt-vault:latest
     container_name: receipt_vault_web
     command: ["python", "main.py", "--web", "--host", "0.0.0.0", "--no-browser"]
     ports:
       - "7000"
     volumes:
-      - ./data:/app/data    # persist your database outside the container
+      - ../data:/app/data    # persist your database outside the container (repo_root/data)
     restart: unless-stopped
 
   # ── GUI mode (Linux with X11 forwarding) ──────────────────────────────────
   # docker compose --profile gui up
   app-gui:
-    build: .
+    build:
+      context: ..
+      dockerfile: installation/Dockerfile
     image: receipt-vault:latest
     container_name: receipt_vault_gui
     profiles: ["gui"]
@@ -28,5 +37,5 @@ services:
       - DISPLAY=${DISPLAY}
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:ro
-      - ./data:/app/data
+      - ../data:/app/data
     network_mode: host

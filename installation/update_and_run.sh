@@ -2,6 +2,13 @@
 # ReceiptVault – cross-platform launcher (macOS / Linux / ChromeOS)
 set -euo pipefail
 
+# This script lives in installation/. The app itself (main.py, gui/, web/,
+# core/, utils.py) lives one level up, at the repo root - move there so
+# git pull, venv, and main.py all resolve correctly, regardless of where
+# this script was invoked from.
+INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$INSTALL_DIR/.."
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 0.  Detect OS and execution environment
 # ─────────────────────────────────────────────────────────────────────────────
@@ -83,7 +90,7 @@ fi
 source venv/bin/activate
 
 echo "Installing / verifying dependencies..."
-pip install -r requirements.txt --quiet
+pip install -r "$INSTALL_DIR/requirements.txt" --quiet
 echo ""
 
 # ─────────────────────────────────────────────────────────────────────────────

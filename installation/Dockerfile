@@ -17,9 +17,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ── App ───────────────────────────────────────────────────────────────────────
+# NOTE: this Dockerfile now lives in installation/, but it must still be built
+# with the REPO ROOT as the build context (so COPY . . can see core/, gui/,
+# web/, main.py, utils.py, etc). That means:
+#   docker build -f installation/Dockerfile -t receipt-vault .
+# docker-compose.yml (in this same folder) is already set up to do this for
+# you via `context: .. / dockerfile: Dockerfile`, so `docker compose up` and
+# ./docker-up.sh still work exactly as before without any extra flags.
 WORKDIR /app
 
-COPY requirements.txt .
+COPY installation/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
