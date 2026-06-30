@@ -2,7 +2,7 @@
 setlocal EnableDelayedExpansion
 
 echo ======================================
-echo  ReceiptVault – Windows Launcher
+echo  ReceiptVault - Windows Launcher
 echo ======================================
 echo.
 
@@ -12,7 +12,7 @@ if exist ".git" (
     git pull origin main
     echo.
 ) else (
-    echo [INFO] Not a git repository – skipping auto-update.
+    echo [INFO] Not a git repository - skipping auto-update.
     echo.
 )
 
@@ -38,8 +38,8 @@ echo.
 :: ── Mode selection ─────────────────────────────────────────────────────────
 echo How would you like to run ReceiptVault?
 echo.
-echo   [1] Web Mode   – opens in your browser  (recommended for most users)
-echo   [2] GUI Mode   – native desktop window
+echo   [1] Web Mode   - opens in your browser  (recommended for most users)
+echo   [2] GUI Mode   - native desktop window
 echo.
 set /p MODE="Enter 1 or 2 (default 1): "
 
@@ -52,7 +52,6 @@ if "%MODE%"=="2" (
 ) else (
     echo.
     echo Starting in Web mode...
-    start "" http://127.0.0.1:7000
     python main.py --web
 )
 

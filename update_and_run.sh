@@ -36,9 +36,9 @@ echo "======================================"
 echo " Checking for updates..."
 echo "======================================"
 if [ -d ".git" ]; then
-    git pull origin main || echo "[WARN] Git pull failed – continuing with current version."
+    git pull origin main || echo "[WARN] Git pull failed - continuing with current version."
 else
-    echo "[INFO] Not a git repository – skipping auto-update."
+    echo "[INFO] Not a git repository - skipping auto-update."
 fi
 echo ""
 
@@ -93,24 +93,18 @@ echo "======================================"
 echo " Starting ReceiptVault"
 echo "======================================"
 
-open_browser() {
-    local url="$1"
-    if command -v open      &>/dev/null; then open      "$url"      # macOS
-    elif command -v xdg-open &>/dev/null; then xdg-open  "$url" &   # Linux / ChromeOS
-    fi
-}
-
 if [ "$IS_CHROMEOS" = true ]; then
     # ChromeOS: GUI (Tk) window management is unreliable inside Crostini
     echo "[ChromeOS] Running in Web mode (GUI mode is not supported on ChromeOS)."
+    echo "           ReceiptVault will pick a free port automatically and open it for you."
     echo ""
-    open_browser "http://127.0.0.1:7000"
     python3 main.py --web
 
 elif [ "$IS_GUI_CAPABLE" = false ]; then
     # Headless Linux (server, WSL without display, etc.)
-    echo "[Headless] No graphical display detected – running in Web mode."
-    echo "           Open http://127.0.0.1:7000 in your browser."
+    echo "[Headless] No graphical display detected - running in Web mode."
+    echo "           ReceiptVault will pick a free port automatically (the URL"
+    echo "           to open will be printed below once the server starts)."
     echo ""
     python3 main.py --web --no-browser
 
@@ -118,8 +112,8 @@ else
     # macOS or Linux with a display – offer a choice
     echo "How would you like to run ReceiptVault?"
     echo ""
-    echo "  [1] Web Mode  – opens in your browser (recommended)"
-    echo "  [2] GUI Mode  – native desktop window"
+    echo "  [1] Web Mode  - opens in your browser (recommended)"
+    echo "  [2] GUI Mode  - native desktop window"
     echo ""
     read -rp "Enter 1 or 2 (default 1): " MODE
     MODE="${MODE:-1}"
@@ -131,7 +125,6 @@ else
     else
         echo ""
         echo "Starting in Web mode..."
-        open_browser "http://127.0.0.1:7000"
         python3 main.py --web
     fi
 fi

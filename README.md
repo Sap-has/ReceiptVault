@@ -34,9 +34,9 @@ ReceiptVault is a **local, privacy-first** receipt-tracking application. It runs
 | Linux (with desktop) | ✅ | ✅ | `update_and_run.sh` |
 | Linux (headless / server) | ✅ | ❌ | `update_and_run.sh` (auto web) |
 | ChromeOS (Crostini) | ✅ | ❌ | `update_and_run.sh` (auto web) |
-| Docker | ✅ (default) | ✅ (Linux X11) | `docker compose up` |
+| Docker | ✅ (default) | ✅ (Linux X11) | `./docker-up.sh` (or `docker compose up`) |
 
-> **Web Mode** opens ReceiptVault in your default browser at `http://127.0.0.1:7000`. It works on every OS and is the recommended choice for most users.  
+> **Web Mode** opens ReceiptVault in your default browser. It picks the first free port starting at 7000 automatically and tells you which one it used, so it works even if something else on your machine is already using 7000. It works on every OS and is the recommended choice for most users. 
 > **GUI Mode** opens a native desktop window using CustomTkinter. It requires a graphical desktop environment (not available on ChromeOS or headless Linux).
 
 ---
@@ -99,7 +99,7 @@ cd ReceiptVault
 ### Step 2 – Make scripts executable (macOS / Linux only)
 
 ```bash
-chmod +x update_and_run.sh update_and_run.command
+chmod +x update_and_run.sh update_and_run.command docker-up.sh
 ```
 
 That's it. The launch scripts handle everything else (virtual environment, dependency installation) automatically on first run.
@@ -133,7 +133,7 @@ You will be asked to choose **Web Mode** or **GUI Mode** each time you launch.
 ```
 
 - **If a graphical desktop is detected**, you will be asked to choose Web Mode or GUI Mode.
-- **If no display is detected** (headless server, SSH without X forwarding), Web Mode starts automatically. Browse to `http://YOUR_SERVER_IP:7000` from another machine (only if you change `--host` to `0.0.0.0`; by default it only listens on localhost for security).
+- **If no display is detected** (headless server, SSH without X forwarding), Web Mode starts automatically. The terminal will print the port it picked (starting at 7000, or the next free one if that's taken) — browse to http://YOUR_SERVER_IP:<that port> from another machine (only if you change --host to 0.0.0.0; by default it only listens on localhost for security).
 
 ### ChromeOS
 
@@ -144,27 +144,42 @@ cd ~/ReceiptVault      # or wherever you cloned it
 ./update_and_run.sh
 ```
 
-Web Mode starts automatically. The script detects ChromeOS and skips the mode prompt. Your default browser will open `http://127.0.0.1:7000`.
+Web Mode starts automatically. The script detects ChromeOS and skips the mode prompt. Your default browser will open to the URL printed in the terminal (http://127.0.0.1:7000 unless that port is already in use, in which case the next free one is used instead).
 
 ### Docker (any OS)
 
-**Web mode** (recommended):
+**Web mode** (recommended, and the default — see below):
+```bash
+./docker-up.sh
+```
+This builds the image, starts the container, and prints the URL to open — including the actual port, which is chosen automatically so it won't clash with anything else already using 7000 on your machine.
+
+You can also use plain Compose:
 ```bash
 docker compose up
 ```
-Then open `http://127.0.0.1:7000` in your browser.
+
+`docker compose up` always starts web mode by default — the GUI service is only included when you explicitly ask for it (see below), so a bare `docker compose up` never starts the GUI by accident. With plain Compose you'll need to look up the assigned port yourself once it's running:
+```bash
+docker compose ps              # look in the PORTS column, e.g. 0.0.0.0:54827->7000/tcp
+docker compose port app 7000   # prints just the host port
+```
+Then open http://localhost:<that port> in your browser.
 
 **GUI mode** (Linux with X11 only):
 ```bash
 xhost +local:docker          # allow Docker to use your display
 docker compose --profile gui up
 ```
+Or: `./docker-up.sh --gui`
 
 **One-off run without Compose:**
 ```bash
 docker build -t receipt-vault .
-docker run -p 7000:7000 -v "$(pwd)/data:/app/data" receipt-vault
+docker run --name receipt-vault -p 7000 -v "$(pwd)/data:/app/data" receipt-vault
+docker port receipt-vault 7000   # find out which host port got assigned
 ```
+(-p 7000 with no host-side number tells Docker to pick any free host port. Pin a specific one instead with -p 7000:7000, if you'd rather choose it yourself and are confident it's free.)
 
 ---
 
@@ -188,7 +203,7 @@ Both modes share the **same database** (`data/bills_data.db`). You can switch be
 
 ### Web Mode
 
-After the app starts your browser opens to `http://127.0.0.1:7000` automatically. The available API endpoints are shown on the home page; a full UI is served from the same address.
+After the app starts, your browser opens automatically to the URL printed in the terminal — http://127.0.0.1:7000 by default, or the next free port if 7000 is already in use on your machine. The available API endpoints are shown on the home page; a full UI is served from the same address.
 
 ### GUI Mode
 
@@ -274,7 +289,7 @@ Make sure Python 3.11+ is installed and on your PATH. On Windows, reinstall Pyth
 ### "Permission denied" when running the script (macOS / Linux)
 
 ```bash
-chmod +x update_and_run.sh update_and_run.command
+chmod +x update_and_run.sh update_and_run.command docker-up.sh
 ```
 
 ### The browser opens but shows "This site can't be reached"
@@ -296,16 +311,15 @@ Also install the Tk backend: `sudo apt install python3-tk`
 - PaddleOCR downloads model files on first use; make sure you are connected to the internet for that initial download.
 
 ### Port 7000 is already in use
+As of the current version, web mode automatically picks the next free port starting at 7000 and tells you which one it's using — so you generally don't need to do anything. This section only applies if you've pinned a specific port yourself.
 
-Launch the app on a different port:
+If you passed --port explicitly (e.g. python main.py --web --port 8080) and that exact port is taken, the app will exit with a clear error instead of guessing for you — just drop --port to go back to auto-selection, or pick a different number. To find out what's using a given port:
 ```bash
-python main.py --web --port 8080
+lsof -i :8080          # macOS / Linux
+netstat -ano | findstr 8080   # Windows
 ```
-Or find and stop the process using port 7000:
-```bash
-lsof -i :7000          # macOS / Linux
-netstat -ano | findstr 7000   # Windows
-```
+
+If you see an error that no free port could be found at all (unlikely — it scans 100 ports starting at 7000), something unusual is tying up a large range of ports on your machine; free some up or specify a known-free --port manually.
 
 ### After an update the app shows an error
 
@@ -316,8 +330,8 @@ Run `pip install -r requirements.txt` inside the virtual environment (the launch
 ## 11. Command-Line Reference
 
 ```
-python main.py --web            # Start web server (default port 7000)
-python main.py --web --port 8080            # Use a different port
+python main.py --web            # Start web server (auto-picks a free port starting at 7000)
+python main.py --web --port 8080            # Pin a specific port (errors if it's already taken)
 python main.py --web --host 0.0.0.0         # Listen on all interfaces (LAN access)
 python main.py --web --no-browser           # Don't auto-open a browser tab
 python main.py --gui                        # Start desktop GUI window
@@ -328,7 +342,7 @@ python main.py --gui                        # Start desktop GUI window
 | `--web` | Launch the web interface via Flask |
 | `--gui` | Launch the native desktop GUI via CustomTkinter |
 | `--host HOST` | (Web only) Bind address, default `127.0.0.1` |
-| `--port PORT` | (Web only) Port number, default `7000` |
+| `--port PORT` | (Web only) Pin a specific port number. If omitted, the next free port starting at 7000 is selected automatically and printed to the terminal. |
 | `--no-browser` | (Web only) Skip auto-opening a browser tab |
 
 ---

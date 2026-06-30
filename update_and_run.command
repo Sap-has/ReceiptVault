@@ -13,9 +13,9 @@ echo "======================================"
 echo " Checking for updates..."
 echo "======================================"
 if [ -d ".git" ]; then
-    git pull origin main || echo "[WARN] Git pull failed – continuing with current version."
+    git pull origin main || echo "[WARN] Git pull failed - continuing with current version."
 else
-    echo "[INFO] Not a git repository – skipping auto-update."
+    echo "[INFO] Not a git repository - skipping auto-update."
 fi
 echo ""
 
@@ -64,8 +64,8 @@ echo "======================================"
 echo " How would you like to run ReceiptVault?"
 echo "======================================"
 echo ""
-echo "  [1] Web Mode  – opens in your browser (recommended)"
-echo "  [2] GUI Mode  – native desktop window"
+echo "  [1] Web Mode  - opens in your browser (recommended)"
+echo "  [2] GUI Mode  - native desktop window"
 echo ""
 read -rp "Enter 1 or 2 (default 1): " MODE
 MODE="${MODE:-1}"
@@ -77,6 +77,5 @@ if [ "$MODE" = "2" ]; then
 else
     echo ""
     echo "Starting in Web mode..."
-    open http://127.0.0.1:7000
     python3 main.py --web
 fi

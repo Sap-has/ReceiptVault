@@ -1,4 +1,5 @@
 import os
+import socket
 import sqlite3
 import subprocess
 import sys
@@ -95,8 +96,46 @@ def update_application():
 # Web mode  (Flask)
 # ---------------------------------------------------------------------------
 
-def run_web(host: str = "127.0.0.1", port: int = 7000, open_browser: bool = True):
-    """Start the Flask web server."""
+DEFAULT_PORT = 7000
+
+
+def _is_port_free(host: str, port: int) -> bool:
+    """Return True if `port` can be bound on `host` right now."""
+    # 0.0.0.0 means "all interfaces" – probe the wildcard address itself,
+    # since that's what Flask will actually try to bind to.
+    probe_host = host if host not in ("0.0.0.0", "") else "0.0.0.0"
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            sock.bind((probe_host, port))
+        except OSError:
+            return False
+        return True
+
+
+def find_free_port(host: str = "127.0.0.1", start_port: int = DEFAULT_PORT,
+                    max_attempts: int = 100) -> int:
+    """
+    Return `start_port` if it's free, otherwise scan upward and return the
+    first free port found. Raises RuntimeError if nothing is free in range.
+    """
+    for port in range(start_port, start_port + max_attempts):
+        if _is_port_free(host, port):
+            return port
+    raise RuntimeError(
+        f"Could not find a free port in range {start_port}-{start_port + max_attempts - 1} "
+        f"on {host}. Try freeing up a port or specifying one manually with --port."
+    )
+
+
+def run_web(host: str = "127.0.0.1", port: int | None = None, open_browser: bool = True):
+    """Start the Flask web server.
+
+    If `port` is None, the next available port starting at DEFAULT_PORT
+    (7000) is chosen automatically and announced to the user. If `port` is
+    given explicitly (e.g. via --port), that exact port is used and Flask
+    will raise its normal error if it's already taken.
+    """
     try:
         from flask import Flask, jsonify, request as flask_request
     except ImportError:
@@ -105,6 +144,19 @@ def run_web(host: str = "127.0.0.1", port: int = 7000, open_browser: bool = True
             "        or re-run the launch script so it can install dependencies.\n"
         )
         sys.exit(1)
+
+    auto_selected = port is None
+    if auto_selected:
+        try:
+            port = find_free_port(host=host, start_port=DEFAULT_PORT)
+        except RuntimeError as exc:
+            print(f"\n[ERROR] {exc}\n")
+            sys.exit(1)
+        if port != DEFAULT_PORT:
+            print(
+                f"\n[INFO] Port {DEFAULT_PORT} is already in use – "
+                f"using port {port} instead.\n"
+            )
 
     vault = ReceiptVault()
     vault.init_db()
@@ -173,6 +225,14 @@ def run_web(host: str = "127.0.0.1", port: int = 7000, open_browser: bool = True
     # ------------------------------------------------------------------
     # Launch
     # ------------------------------------------------------------------
+
+    if not auto_selected and not _is_port_free(host, port):
+        print(
+            f"\n[ERROR] Port {port} is already in use on {host}.\n"
+            f"        Choose a different port with --port, "
+            f"or omit --port to auto-select a free one.\n"
+        )
+        sys.exit(1)
 
     url = f"http://{host}:{port}"
     print(f"\n  ReceiptVault is running → {url}\n  Press Ctrl+C to stop.\n")
@@ -268,7 +328,11 @@ def main():
         help="(Web mode only) Don't auto-open a browser tab",
     )
     parser.add_argument("--host", default="127.0.0.1", help="(Web mode only) Bind address")
-    parser.add_argument("--port", type=int, default=7000, help="(Web mode only) Port number")
+    parser.add_argument(
+        "--port", type=int, default=None,
+        help=f"(Web mode only) Port number. If omitted, the next free port "
+             f"starting at {DEFAULT_PORT} is chosen automatically.",
+    )
 
     args = parser.parse_args()
 
