@@ -1,0 +1,19 @@
+# Python cache and build artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environment
+venv/
+.env
+
+# Local data and runtime files
+/data/
+*.sqlite3
+*.db
+
+# IDE and OS files
+.DS_Store
+*.swp
+*.swo

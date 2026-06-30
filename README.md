@@ -279,6 +279,8 @@ If an update fails, the app will continue running with the current version. Chec
 | **Backups** | Copy this file anywhere to back up all your receipts |
 | **Migration** | Move the whole project folder (or just `data/`) to a new machine |
 
+The database is intentionally excluded from Git via `.gitignore`, so your receipts, vendors, categories, and other personal data are kept local and do not get published when you push code. If you clone the repo on a new machine, the `data/` folder and `data/bills_data.db` file will be created automatically when the app first runs.
+
 The database is never sent to any server. Updates from GitHub only change the application code; your `data/` folder is never overwritten or touched by `git pull`.
 
 ### Backing up
