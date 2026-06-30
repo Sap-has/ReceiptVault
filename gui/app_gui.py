@@ -34,7 +34,7 @@ def run_gui():
     sidebar = ctk.CTkFrame(app, width=200, corner_radius=0)
     sidebar.pack(side="left", fill="y")
 
-    ctk.CTkLabel(sidebar, text="📄 ReceiptVault", font=ctk.CTkFont(size=18, weight="bold")).pack(
+    ctk.CTkLabel(sidebar, text="Receipt Vault", font=ctk.CTkFont(size=18, weight="bold")).pack(
         pady=(30, 10), padx=20
     )
 
@@ -61,7 +61,7 @@ def run_gui():
 
     ctk.CTkLabel(
         main_area,
-        text="Welcome to ReceiptVault",
+        text="Welcome to Receipt Vault",
         font=ctk.CTkFont(size=22, weight="bold"),
     ).pack(pady=(30, 8))
 

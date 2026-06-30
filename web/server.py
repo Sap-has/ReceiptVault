@@ -104,8 +104,18 @@ def run_web(host: str = "127.0.0.1", port: int | None = None, open_browser: bool
 
     @flask_app.route("/api/update", methods=["POST"])
     def api_update():
-        threading.Thread(target=update_application, daemon=True).start()
-        return jsonify({"status": "Update initiated. The server will restart shortly."})
+        """Start an update in a background thread. Returns immediately so the browser
+        gets a response before the server restarts."""
+        def perform_update():
+            success = update_application()
+            if not success:
+                print("[WARNING] Update failed - server still running with current version")
+        
+        threading.Thread(target=perform_update, daemon=True).start()
+        return jsonify({
+            "status": "Update started",
+            "message": "Checking for updates from GitHub. The app will restart shortly with any new changes."
+        })
 
     # ------------------------------------------------------------------
     # Launch

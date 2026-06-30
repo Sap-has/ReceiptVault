@@ -233,22 +233,41 @@ ReceiptVault uses **PaddleOCR** to extract data from receipt photos. To scan a r
 
 ### Stopping the App
 
-- **Web Mode**: Press `Ctrl+C` in the terminal window where you launched the app.
-- **GUI Mode**: Close the desktop window.
+**Native Mode (Windows, macOS, Linux):**
+- **Web Mode**: Press `Ctrl+C` in the terminal window where you launched the app. The server will shut down gracefully.
+- **GUI Mode**: Close the desktop window. The app will close immediately.
+
+**Docker:**
+- Press `Ctrl+C` in the terminal where you ran `./installation/docker-up.sh`. The container will shut down gracefully and all resources will be cleaned up.
+- If you ran `docker-up.sh -d` (detached mode), or if you ran `docker compose up` manually, stop the container with:
+  ```bash
+  docker compose down       # from inside installation/ folder
+  ```
 
 ---
 
 ## 7. Updating
 
-ReceiptVault can update itself automatically. **Each time you use a launch script it pulls the latest code from GitHub before starting.**
+ReceiptVault automatically checks for updates from GitHub **each time you launch the app**. The latest code is pulled before the app starts.
 
-You can also trigger an update manually:
+### Automatic updates when launching:
+- **Windows**: Each time you run `installation\run_app.bat`
+- **macOS**: Each time you double-click `installation/update_and_run.command`
+- **Linux**: Each time you run `./installation/update_and_run.sh`
+- **Docker**: Each time you run `./installation/docker-up.sh` or `docker compose up` (the `--build` flag ensures the image is rebuilt with latest code)
 
-- **From the web interface**: `POST /api/update` (or click the Update button when the UI is complete).
-- **From the GUI**: Click the **⬆ Update App** button in the sidebar.
-- **From the terminal**: `git pull origin main` inside the project folder.
+### Manual update triggers:
+- **Web Mode UI**: Click the "🔄 Update" button (or `POST /api/update` API endpoint). The browser will show an update notification, and the app will restart shortly with the latest code.
+- **GUI Mode**: Click the **⬆ Update App** button in the sidebar. A popup will appear and the app will restart.
+- **Terminal** (any platform): Run `git pull origin main` inside the project folder, then restart the app.
 
-After an update the app restarts automatically to apply the changes.
+### What happens during an update:
+1. The latest code is pulled from GitHub
+2. Dependencies are checked and updated if needed (happens automatically in launch scripts)
+3. The app restarts automatically
+4. Your database and data in `data/bills_data.db` is never touched – only the application code changes
+
+If an update fails, the app will continue running with the current version. Check the terminal output for error details.
 
 ---
 

@@ -101,6 +101,43 @@ class ReceiptVault:
         ).fetchone()
         return dict(row) if row else None
 
+    def search_vendors(self, query: str, limit: int = 8) -> list[dict]:
+        """
+        Return vendors whose name contains `query` (case-insensitive,
+        matches anywhere in the name - not just a prefix - so typing "foods"
+        still surfaces "Whole Foods"), shortest names first so the closest
+        match tends to surface above longer, less-specific ones, capped at
+        `limit` results.
+
+        This is the method a live "type a vendor name and see suggestions"
+        field should call on every keystroke. An empty/whitespace-only query
+        returns an empty list rather than every vendor, since "show nothing
+        until the user has typed something" is the right behavior for an
+        autocomplete dropdown.
+
+        `query`'s own literal '%', '_', and '\\' characters are escaped
+        before being embedded in the LIKE pattern, so a vendor named e.g.
+        "100% Pure" or "A_B Hardware" can't accidentally turn the user's
+        typed text into SQL wildcards.
+        """
+        query = query.strip()
+        if not query:
+            return []
+
+        escaped = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        like_pattern = f"%{escaped}%"
+
+        rows = self.conn.execute(
+            """
+            SELECT id, name FROM vendors
+            WHERE name LIKE ? ESCAPE '\\' COLLATE NOCASE
+            ORDER BY LENGTH(name), name
+            LIMIT ?
+            """,
+            (like_pattern, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
     def get_or_create_vendor(self, name: str) -> int:
         """
         Look up a vendor by name (case-insensitive, whitespace-trimmed),

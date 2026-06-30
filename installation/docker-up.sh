@@ -17,9 +17,12 @@
 # finds docker-compose.yml no matter where you called it from.
 set -euo pipefail
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+
 # Move to the directory containing this script so docker compose finds
 # docker-compose.yml regardless of the caller's current working directory.
-cd "$(dirname "$0")"
+cd "$SCRIPT_DIR"
 
 GUI_MODE=false
 DETACHED=false
@@ -34,10 +37,16 @@ for arg in "$@"; do
     esac
 done
 
+echo "Fetching latest repository updates from git..."
+git -C "$REPO_ROOT" fetch --all --prune
+
+echo "Updating repository from git before starting Docker..."
+git -C "$REPO_ROOT" pull --ff-only
+
 if [ "$GUI_MODE" = true ]; then
     echo "Starting ReceiptVault in GUI mode (Docker, Linux/X11)..."
     xhost +local:docker 2>/dev/null || true
-    exec docker compose --profile gui up "${EXTRA_ARGS[@]}"
+    exec docker compose --profile gui up --build "${EXTRA_ARGS[@]}"
 fi
 
 echo "======================================"
@@ -67,11 +76,18 @@ if [ "$DETACHED" = true ]; then
     exit 0
 fi
 
-echo "  Press Ctrl+C to stop following logs (the container keeps running in the background)."
-echo "  Run 'docker compose down' to stop it."
+echo "  Press Ctrl+C to stop ReceiptVault."
 echo ""
 
+# Trap Ctrl+C to gracefully shut down the container
+trap_handler() {
+    echo ""
+    echo "Stopping ReceiptVault..."
+    docker compose down
+    exit 0
+}
+trap trap_handler SIGINT SIGTERM
+
 # Attach to logs so the experience matches `docker compose up` running in
-# the foreground. Ctrl+C here only detaches from logs; it does not stop
-# the container (matching the message above).
-exec docker compose logs -f app
+# the foreground. Ctrl+C will trigger the trap above and stop the container.
+docker compose logs -f app

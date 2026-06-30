@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ReceiptVault</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <h1>Receipt Vault</h1>
+
+      <nav class="nav-links" aria-label="Primary navigation">
+        <a href="#" class="nav-item active">Dashboard</a>
+        <a href="#" class="nav-item">All Receipts</a>
+        <a href="#" class="nav-item">Add Receipt</a>
+        <a href="#" class="nav-item">Categories</a>
+        <a href="#" class="nav-item">Vendors</a>
+      </nav>
+
+      <a href="#" class="update-button">⬆ Update App</a>
+    </aside>
+
+    <main class="main-area">
+      <div class="content-card">
+        <h2>Welcome to Receipt Vault</h2>
+        <p>Your receipts are stored locally in data/bills_data.db</p>
+
+        <div class="quick-links">
+          <a href="/api/bills">GET /api/bills</a>
+          <a href="/api/vendors">GET /api/vendors</a>
+          <a href="/api/categories">GET /api/categories</a>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
