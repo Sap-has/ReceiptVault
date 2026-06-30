@@ -1,0 +1,34 @@
+version: '3.8'
+
+# Usage:
+#   Web mode (default):  docker compose up
+#   GUI mode (Linux):    docker compose --profile gui up
+
+services:
+
+  # ── Web mode ──────────────────────────────────────────────────────────────
+  app:
+    build: .
+    image: receipt-vault:latest
+    container_name: receipt_vault_web
+    command: python main.py --web --host 0.0.0.0 --no-browser
+    ports:
+      - "7000:7000"
+    volumes:
+      - ./data:/app/data    # persist your database outside the container
+    restart: unless-stopped
+
+  # ── GUI mode (Linux with X11 forwarding) ──────────────────────────────────
+  # docker compose --profile gui up
+  app-gui:
+    build: .
+    image: receipt-vault:latest
+    container_name: receipt_vault_gui
+    profiles: ["gui"]
+    command: python main.py --gui
+    environment:
+      - DISPLAY=${DISPLAY}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+      - ./data:/app/data
+    network_mode: host

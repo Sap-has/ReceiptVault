@@ -1,29 +1,33 @@
 FROM python:3.11-slim
 
-# Set environment variables to ensure Python doesn't buffer output and handles paths correctly
-ENV PYTHONDONTRIES=1 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONDELAY_IMPORT=0
+# ── Environment ──────────────────────────────────────────────────────────────
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# Install system dependencies required for OpenCV, PaddlePaddle, and SQLite3
-# 'libgl1-mesa-glx' and 'libglib2.0-0' are essential for PaddleOCR/OpenCV on slim images
-RUN apt-get update && apt-get install -y \
+# ── System dependencies ───────────────────────────────────────────────────────
+# libgl1 / libglib2.0-0  → required by OpenCV / PaddleOCR
+# libx11-6 / python3-tk  → required for customtkinter GUI mode
+# sqlite3                → CLI tool (the Python module is built-in)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
     libx11-6 \
-    sqlite3 \
     python3-tk \
+    sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Set the working directory
+# ── App ───────────────────────────────────────────────────────────────────────
 WORKDIR /app
 
-# Copy and install requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code
 COPY . .
 
-# Command to run your application (replace with your entry point)
-CMD ["python", "main.py"]
+# Persist the database directory as a named volume mount point
+VOLUME ["/app/data"]
+
+# Default: web mode on 0.0.0.0 so Docker port mapping works
+# Override with:  docker run ... receipt-vault python main.py --gui
+EXPOSE 7000
+CMD ["python", "main.py", "--web", "--host", "0.0.0.0", "--no-browser"]
