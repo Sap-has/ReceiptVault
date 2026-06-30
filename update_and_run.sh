@@ -6,7 +6,7 @@ echo "Checking for updates..."
 git pull origin main
 
 echo "Building/Updating Docker image..."
-docker build -t bill-manager .
+docker build -t receiptVault .
 
 echo "Starting Application..."
 # The --rm flag ensures the container is cleaned up after closing
@@ -15,4 +15,4 @@ docker run --rm \
     -e DISPLAY=$DISPLAY \
     -v /tmp/.X11-unix:/tmp/.X11-unix \
     -v "$(pwd)/bills_data.db:/app/bills_data.db" \
-    bill-manager
+    receiptVault

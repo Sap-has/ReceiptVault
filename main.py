@@ -2,7 +2,7 @@ import customtkinter
 import sys
 import sqlite3
 
-class BillManager():
+class ReceiptVault():
     def init_db(self):
         self.conn = sqlite3.connect('bills_data.db')
         self.cur = self.conn.cursor()
@@ -62,5 +62,5 @@ class BillManager():
 
 if __name__ == '__main__':
     app = customtkinter.CTk()
-    app.title("Bill Manager")
+    app.title("Receipt Vault")
     app.mainloop()

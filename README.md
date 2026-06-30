@@ -1,4 +1,4 @@
-# Bill Manager
+# ReceiptVault
 This application helps you track and manage your bills easily.
 
 ## Prerequisites
