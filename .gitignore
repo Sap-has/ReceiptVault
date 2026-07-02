@@ -9,7 +9,8 @@ venv/
 .env
 
 # Local data and runtime files
-/data/
+/data
+/receipts
 *.sqlite3
 *.db
 
