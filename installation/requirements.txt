@@ -1,4 +1,11 @@
+# Web interface
 flask>=3.0
+
+# Desktop GUI
 customtkinter
+tkcalendar      # calendar date-picker widget in the Add Receipt form
+pillow          # receipt image display in the OCR scan tab
+
+# OCR (PP-OCRv6) – downloaded model files are cached in ~/.paddlex on first use
 paddleocr
 paddlepaddle

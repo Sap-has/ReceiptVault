@@ -10,6 +10,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # sqlite3                → CLI tool (the Python module is built-in)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
+    libgomp1 \
     libglib2.0-0 \
     libx11-6 \
     python3-tk \
@@ -33,6 +34,8 @@ COPY . .
 
 # Persist the database directory as a named volume mount point
 VOLUME ["/app/data"]
+
+ENV FLAGS_use_mkldnn=0
 
 # Default: web mode on 0.0.0.0 so Docker port mapping works
 # Override with:  docker run ... receipt-vault python main.py --gui
