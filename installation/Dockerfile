@@ -33,7 +33,7 @@ COPY installation/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 RUN if [ "$NO_AVX" = "true" ]; then \
-        pip install paddlepaddle==3.3.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/ ; \ 
+        pip install onnxruntime rapidocr_onxxruntime; \ 
     fi
 
 COPY . .
