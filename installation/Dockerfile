@@ -33,7 +33,7 @@ COPY installation/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 RUN if [ "$NO_AVX" = "true" ]; then \
-        pip install onnxruntime rapidocr_onxxruntime; \ 
+        pip install onnxruntime rapidocr_onnxruntime; \ 
     fi
 
 COPY . .
