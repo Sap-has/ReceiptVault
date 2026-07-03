@@ -27,8 +27,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ./docker-up.sh still work exactly as before without any extra flags.
 WORKDIR /app
 
+ARG NO_AVX=false 
+
 COPY installation/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+RUN if [ "$NO_AVX" = "true" ]; then \
+        pip install paddlepaddle==3.3.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/ ; \ 
+    fi
 
 COPY . .
 

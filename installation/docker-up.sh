@@ -24,6 +24,13 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 # docker-compose.yml regardless of the caller's current working directory.
 cd "$SCRIPT_DIR"
 
+if grep -q avx /proc/cpuinfo; then
+    CHROME_ARG="false"
+else
+    echo "[INFO] AVX not detected on host CPU. Enabling compatibility mode."
+    CHROME_ARG="true"
+fi
+
 GUI_MODE=false
 DETACHED=false
 EXTRA_ARGS=()
@@ -46,7 +53,9 @@ git -C "$REPO_ROOT" pull --ff-only
 if [ "$GUI_MODE" = true ]; then
     echo "Starting ReceiptVault in GUI mode (Docker, Linux/X11)..."
     xhost +local:docker 2>/dev/null || true
-    exec docker compose --profile gui up --build app-gui "${EXTRA_ARGS[@]}"
+    
+    docker compose --profile gui build --build-arg NO_AVX=$CHROME_ARG app-gui
+    exec docker compose --profile gui up app-gui "${EXTRA_ARGS[@]}"
 fi
 
 echo "======================================"
@@ -55,7 +64,8 @@ echo "======================================"
 
 # Build the image and start the web service in the background so we can
 # inspect the port mapping before deciding whether to attach to logs.
-docker compose up --build -d app "${EXTRA_ARGS[@]}"
+docker compose build --build-arg CHROME=$CHROME_ARG app
+docker compose up -d app "${EXTRA_ARGS[@]}"
 
 # Ask Docker which host port it mapped to the container's port 7000.
 # `docker compose port` prints e.g. "0.0.0.0:54827" – we just want the number.
