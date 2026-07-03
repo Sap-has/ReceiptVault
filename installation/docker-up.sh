@@ -64,7 +64,7 @@ echo "======================================"
 
 # Build the image and start the web service in the background so we can
 # inspect the port mapping before deciding whether to attach to logs.
-docker compose build --build-arg CHROME=$CHROME_ARG app
+docker compose build --build-arg NO_AVX=$CHROME_ARG app
 docker compose up -d app "${EXTRA_ARGS[@]}"
 
 # Ask Docker which host port it mapped to the container's port 7000.
