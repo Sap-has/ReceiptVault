@@ -92,10 +92,6 @@ Double-click the launcher in the installation folder or run:
 - Opens in your browser automatically
 - The app prints the chosen local address and port
 
-### GUI Mode
-- Opens a native desktop window
-- Useful if you prefer a desktop-style app experience
-
 ### Stopping the app
 - Web mode: press Ctrl+C in the terminal
 - GUI mode: close the window
@@ -142,11 +138,9 @@ ReceiptVault will usually select the next free port automatically.
 ```bash
 python main.py --web
 python main.py --web --port 8080
-python main.py --gui
 ```
 
 | Command | Description |
 |---|---|
 | `python main.py --web` | Start the web interface |
 | `python main.py --web --port 8080` | Pin a specific port |
-| `python main.py --gui` | Start the desktop GUI |

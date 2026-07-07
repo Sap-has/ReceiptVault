@@ -29,12 +29,6 @@ sudo apt update
 sudo apt install -y python3 python3-venv python3-pip git
 ```
 
-For GUI mode, also install the Tk backend:
-
-```bash
-sudo apt install -y python3-tk
-```
-
 ---
 
 ## 2. Installation
@@ -79,7 +73,7 @@ docker compose up
 
 ### Native Linux
 
-If a graphical desktop is present, you can choose Web Mode or GUI Mode. If no display is detected, web mode starts automatically.
+Web mode starts automatically.
 
 ```bash
 ./installation/update_and_run.sh
@@ -93,10 +87,6 @@ If a graphical desktop is present, you can choose Web Mode or GUI Mode. If no di
 - Best for headless servers and remote access
 - Opens in the browser when available
 - The terminal will report the selected local port
-
-### GUI Mode
-- Requires a desktop environment
-- Opens a native app window
 
 ### Stopping the app
 - Web mode: press Ctrl+C in the terminal
@@ -131,13 +121,6 @@ Then restart the app.
 chmod +x installation/update_and_run.sh installation/update_and_run.command installation/docker-up.sh
 ```
 
-### GUI mode does not open
-Verify that a graphical session is running and that `DISPLAY` is set:
-
-```bash
-echo $DISPLAY
-```
-
 ### Port 7000 is already in use
 The app will usually choose the next free port automatically.
 
@@ -149,7 +132,6 @@ The app will usually choose the next free port automatically.
 python main.py --web
 python main.py --web --port 8080
 python main.py --web --host 0.0.0.0
-python main.py --gui
 ```
 
 | Command | Description |
@@ -157,4 +139,3 @@ python main.py --gui
 | `python main.py --web` | Start the web interface |
 | `python main.py --web --port 8080` | Pin a specific port |
 | `python main.py --web --host 0.0.0.0` | Listen on all interfaces |
-| `python main.py --gui` | Start the desktop GUI |
