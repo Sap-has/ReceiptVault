@@ -129,7 +129,7 @@ tr.selected { background: rgba(59, 130, 246, 0.2); }
 }
 .toast.show { bottom: 30px; }
 
-/* Responsive adjustments for PWA Mobile viewports */
+/* Mobile */
 @media (max-width: 768px) {
     .app-shell {
         flex-direction: column;
@@ -158,27 +158,4 @@ tr.selected { background: rgba(59, 130, 246, 0.2); }
     .queue-panel { width: 100%; max-height: 200px; }
     .split-pane { flex-direction: column; }
     .img-preview { height: 250px; }
-}
-
-/* Floating Action Camera Button Setup */
-.upload-container {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    z-index: 999;
-}
-.upload-container label {
-    background: var(--primary);
-    color: white;
-    padding: 14px 20px;
-    border-radius: 50px;
-    font-weight: bold;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.4);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.upload-container input[type="file"] {
-    display: none; /* Hide native ugly field */
 }
