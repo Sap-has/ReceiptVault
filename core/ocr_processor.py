@@ -9,6 +9,15 @@ Keeps all OCR-specific code in one place so:
 
 OCR model is loaded lazily on first call to scan_receipt() so that startup
 time is not penalised on users who never scan a receipt.
+
+GPU:
+  If an NVIDIA GPU is present *and* the installed paddlepaddle build supports
+  CUDA (i.e. `paddlepaddle-gpu`, installed automatically by
+  installation/gpu_setup.py when a GPU is detected), PaddleOCR is run on
+  "gpu:0" instead of the CPU. Detection happens once, the first time the OCR
+  engine is created, and always falls back safely to CPU - either because no
+  GPU/CUDA build is available, or because GPU initialisation itself failed
+  for some other reason (driver mismatch, out of memory, etc.).
 """
 
 from __future__ import annotations
@@ -22,12 +31,53 @@ from typing import Optional
 # app keeps working even when paddleocr / paddlepaddle are not installed)
 # ---------------------------------------------------------------------------
 
-_ocr = None   # module-level cache; None means "not yet initialised"
+_ocr = None           # module-level cache; None means "not yet initialised"
+_ocr_device = None     # the device the live _ocr instance actually ended up on
+
+
+def _resolve_device() -> str:
+    """
+    Decide which device PaddleOCR should run inference on.
+
+    Returns "gpu:0" only when BOTH are true:
+      - a CUDA-capable NVIDIA GPU is visible to the driver, and
+      - the installed paddlepaddle build was compiled with CUDA support
+        (the plain PyPI `paddlepaddle` wheel is CPU-only; `paddlepaddle-gpu`
+        is required for this to ever return "gpu:0").
+
+    Falls back to "cpu" in every other case, including if paddle itself
+    isn't installed yet or probing CUDA raises for any reason.
+    """
+    try:
+        import paddle  # noqa: PLC0415 (lazy import, mirrors the paddleocr import below)
+    except ImportError:
+        return "cpu"
+
+    try:
+        if paddle.device.is_compiled_with_cuda() and paddle.device.cuda.device_count() > 0:
+            return "gpu:0"
+    except Exception:
+        # Any failure while probing CUDA (odd driver state, etc.) - stay safe.
+        pass
+    return "cpu"
+
+
+def get_device_info() -> dict:
+    """
+    Report which device the OCR engine is (or would be) using. Handy for a
+    "Using GPU" / "Using CPU" indicator in the GUI or web UI, or for tests.
+    """
+    device = _ocr_device if _ocr is not None else _resolve_device()
+    return {
+        "device": device,
+        "using_gpu": device.startswith("gpu"),
+        "initialized": _ocr is not None,
+    }
 
 
 def _get_ocr():
     """Return the shared PaddleOCR instance, creating it on first call."""
-    global _ocr
+    global _ocr, _ocr_device
     if _ocr is None:
         try:
             from paddleocr import PaddleOCR  # noqa: PLC0415 (lazy import is intentional)
@@ -38,40 +88,65 @@ def _get_ocr():
                 "or re-run the launch script so it can install dependencies."
             ) from exc
 
-        # PP-OCRv6_medium – Configured for Maximum Accuracy on Receipts.
-        # Speed and memory usage are deprioritized in favor of handling 
-        # faded ink, crumpled paper, skewed angles, and poor lighting.
-        _ocr = PaddleOCR(
-            # Default on Jul 2, 2026 is PP-OCRvy_medium
-            ocr_version="PP-OCRv6",
-            lang="en",
-            
-            # --- 1. Geometric & Document Preprocessing ---
-            # Corrects upside-down or rotated images
-            use_doc_orientation_classify=True,
-            # Corrects curved/crumpled receipts (vital for handheld photos)
-            use_doc_unwarping=True,
-            # Detects and corrects individual text lines that are skewed
-            use_textline_orientation=True,
+        def _build(device: str):
+            # PP-OCRv6_medium – Configured for Maximum Accuracy on Receipts.
+            # Speed and memory usage are deprioritized in favor of handling
+            # faded ink, crumpled paper, skewed angles, and poor lighting.
+            return PaddleOCR(
+                # Default on Jul 2, 2026 is PP-OCRvy_medium
+                ocr_version="PP-OCRv6",
+                lang="en",
 
-            # --- 2. High-Fidelity Detection Limits ---
-            # Default is 960. Receipts are often long; a higher limit prevents 
-            # downscaling that destroys small or fine printed text.
-            det_limit_side_len=2048,
+                # Run on the NVIDIA GPU when one is available and usable;
+                # otherwise fall back to the CPU. See _resolve_device().
+                device=device,
 
-            # --- 3. Thresholding for Faded/Thermal Ink ---
-            # Lowering the binarization threshold (default 0.3) helps capture 
-            # faint, faded ink on thermal paper in poor lighting.
-            det_db_thresh=0.2,
-            # Lowering the box threshold (default 0.6) prevents discarding 
-            # bounding boxes that are faint/low-contrast.
-            det_db_box_thresh=0.3,
-            # Slightly expand bounding boxes (default ~1.5) to prevent edge 
-            # characters (like the last digit of a price) from being clipped.
-            det_db_unclip_ratio=1.8,
+                # --- 1. Geometric & Document Preprocessing ---
+                # Corrects upside-down or rotated images
+                use_doc_orientation_classify=True,
+                # Corrects curved/crumpled receipts (vital for handheld photos)
+                use_doc_unwarping=True,
+                # Detects and corrects individual text lines that are skewed
+                use_textline_orientation=True,
 
-            enable_mkldnn=False, # Kept getting issues, this worked
-        )
+                # --- 2. High-Fidelity Detection Limits ---
+                # Default is 960. Receipts are often long; a higher limit prevents
+                # downscaling that destroys small or fine printed text.
+                det_limit_side_len=2048,
+
+                # --- 3. Thresholding for Faded/Thermal Ink ---
+                # Lowering the binarization threshold (default 0.3) helps capture
+                # faint, faded ink on thermal paper in poor lighting.
+                det_db_thresh=0.2,
+                # Lowering the box threshold (default 0.6) prevents discarding
+                # bounding boxes that are faint/low-contrast.
+                det_db_box_thresh=0.3,
+                # Slightly expand bounding boxes (default ~1.5) to prevent edge
+                # characters (like the last digit of a price) from being clipped.
+                det_db_unclip_ratio=1.8,
+
+                enable_mkldnn=False, # Kept getting issues, this worked
+            )
+
+        device = _resolve_device()
+        try:
+            _ocr = _build(device)
+            _ocr_device = device
+        except Exception as exc:
+            if device == "cpu":
+                raise
+            # GPU looked available but engine init still failed (driver
+            # mismatch, VRAM exhausted, etc.) - degrade gracefully to CPU
+            # rather than taking down the whole Scan feature.
+            print(
+                f"[ocr_processor] Could not start PaddleOCR on {device} "
+                f"({exc!r}); falling back to CPU."
+            )
+            _ocr = _build("cpu")
+            _ocr_device = "cpu"
+
+        label = "NVIDIA GPU" if _ocr_device.startswith("gpu") else "CPU"
+        print(f"[ocr_processor] OCR engine ready - running on {_ocr_device} ({label}).")
     return _ocr
 
 

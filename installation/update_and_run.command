@@ -61,6 +61,10 @@ echo "Installing / verifying dependencies..."
 pip install -r "$INSTALL_DIR/requirements.txt" --quiet
 echo ""
 
+echo "Checking for an NVIDIA GPU (for OCR acceleration)..."
+python3 "$INSTALL_DIR/gpu_setup.py"
+echo ""
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 4.  Mode selection  (macOS supports both Web and GUI)
 # ─────────────────────────────────────────────────────────────────────────────

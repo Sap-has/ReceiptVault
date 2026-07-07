@@ -46,6 +46,10 @@ echo Installing / verifying dependencies...
 pip install -r "%INSTALL_DIR%requirements.txt" --quiet
 echo.
 
+echo Checking for an NVIDIA GPU (for OCR acceleration)...
+python "%INSTALL_DIR%gpu_setup.py"
+echo.
+
 :: ── Mode selection ─────────────────────────────────────────────────────────
 echo How would you like to run ReceiptVault?
 echo.

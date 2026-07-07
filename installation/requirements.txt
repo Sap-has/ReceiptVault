@@ -8,4 +8,11 @@ pillow          # receipt image display in the OCR scan tab
 
 # OCR (PP-OCRv6) – downloaded model files are cached in ~/.paddlex on first use
 paddleocr
-paddlepaddle
+
+# NOTE: paddlepaddle itself is intentionally NOT listed here.
+# The launcher scripts (update_and_run.sh / update_and_run.command /
+# run_app.bat) and the Dockerfile all run `installation/gpu_setup.py` after
+# this file, which installs `paddlepaddle-gpu` when an NVIDIA GPU is
+# detected, or the plain CPU `paddlepaddle` wheel otherwise. Installing it
+# here unconditionally would always pull in the CPU-only build and silently
+# stop the GPU one from ever being used.
