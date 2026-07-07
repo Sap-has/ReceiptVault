@@ -434,6 +434,20 @@ async function updateApp() {
   showToast('Update initiated. App will restart.');
 }
 
+// Bind mobile camera to the existing OCR queue logic
+document.getElementById('receipt-camera')?.addEventListener('change', (event) => {
+  // Trigger file processing engine
+  handleFileSelect(event);
+  
+  // Programmatically route UI to the 'Add Receipt' view & 'OCR' tab
+  document.querySelectorAll('.nav-item, .view').forEach(el => el.classList.remove('active'));
+  document.querySelector('[data-target="add"]').classList.add('active');
+  document.getElementById('view-add').classList.add('active');
+  
+  // Open the OCR tab content pane explicitly
+  switchTab('ocr');
+});
+
 // Init Application
 fetchVendors(); 
 fetchCategories();

@@ -55,7 +55,7 @@ def run_web(host: str = "127.0.0.1", port: int | None = None, open_browser: bool
     will raise its normal error if it's already taken.
     """
     try:
-        from flask import Flask, jsonify, render_template, request as flask_request
+        from flask import Flask, jsonify, render_template, send_from_directory, request as flask_request
     except ImportError:
         print(
             "\n[ERROR] Flask is not installed. Run:  pip install flask\n"
@@ -91,6 +91,19 @@ def run_web(host: str = "127.0.0.1", port: int | None = None, open_browser: bool
     @flask_app.route("/")
     def index():
         return render_template("index.html")
+
+    # Route for the PWA Manifest
+    @flask_app.route('/manifest.json')
+    def serve_manifest():
+        return send_from_directory(os.path.join(flask_app.root_path, 'static'), 'manifest.json')
+
+    # Route for the PWA Service Worker
+    @flask_app.route('/sw.js')
+    def serve_sw():
+        # We must explicitly set the content-type header for service workers
+        response = send_from_directory(os.path.join(flask_app.root_path, 'static'), 'sw.js')
+        response.headers['Content-Type'] = 'application/javascript'
+        return response
 
     # --- Bills ---
     @flask_app.route("/api/bills", methods=["GET"])
