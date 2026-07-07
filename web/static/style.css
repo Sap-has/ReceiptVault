@@ -22,7 +22,7 @@ body {
 }
 
 .app-shell { display: flex; min-height: 100vh; width: 100%; }
-.sidebar { width: 220px; background: rgba(15, 23, 42, 0.96); border-right: 1px solid var(--border); padding: 28px 16px; display: flex; flex-direction: column; }
+.sidebar { width: fit-content; background: rgba(15, 23, 42, 0.96); border-right: 1px solid var(--border); padding: 28px 10px; display: flex; flex-direction: column; }
 .sidebar h1 { margin: 0 0 24px; padding: 0 8px; font-size: 1.2rem; }
 .nav-links { display: flex; flex-direction: column; gap: 6px; }
 .nav-item, .update-button { display: block; padding: 10px 12px; border-radius: 8px; color: var(--text); text-decoration: none; cursor: pointer;}
@@ -33,7 +33,7 @@ body {
 .main-area { flex: 1; padding: 28px; position: relative; }
 .view { display: none; height: 100%; }
 .view.active { display: block; }
-.content-card { background: rgba(17, 24, 39, 0.92); border: 1px solid var(--border); border-radius: 12px; padding: 24px; max-width: 1000px; margin: 0 auto;}
+.content-card { background: rgba(17, 24, 39, 0.92); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin: 0 auto;}
 .content-card.full-height { height: calc(100vh - 56px); display: flex; flex-direction: column; }
 .content-card h2 { margin: 0 0 20px; font-size: 1.8rem; }
 
@@ -86,6 +86,40 @@ tr.selected { background: rgba(59, 130, 246, 0.2); }
 .split-pane { display: flex; gap: 24px; }
 .img-preview { flex: 1; background: #000; border-radius: 8px; min-height: 300px; display: flex; align-items: center; justify-content: center; color: var(--muted); overflow: hidden; }
 .ocr-fields { flex: 1; }
+
+/* Batch OCR Queue */
+.ocr-batch-layout { display: flex; gap: 24px; align-items: flex-start; }
+.queue-panel { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.editor-panel { flex: 1; min-width: 0; }
+
+.queue-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; background: var(--panel); border-bottom: 1px solid var(--border); }
+.queue-progress-text { font-size: 0.85rem; color: var(--muted); }
+
+.queue-list { max-height: 480px; overflow-y: auto; display: flex; flex-direction: column; }
+.queue-empty { padding: 20px 14px; color: var(--muted); font-size: 0.9rem; line-height: 1.4; }
+
+.queue-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; }
+.queue-item:hover { background: rgba(255,255,255,0.05); }
+.queue-item.active { background: rgba(59, 130, 246, 0.2); }
+.queue-thumb { width: 42px; height: 42px; object-fit: cover; border-radius: 4px; background: #000; flex-shrink: 0; }
+.queue-info { flex: 1; min-width: 0; }
+.queue-name { font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.queue-status { font-size: 0.78rem; color: var(--muted); }
+.queue-item.status-error .queue-status { color: var(--danger); }
+.queue-item.status-scanning .queue-status { color: var(--accent); }
+.queue-remove { background: transparent; padding: 2px 8px; font-size: 1rem; line-height: 1; color: var(--muted); flex-shrink: 0; }
+.queue-remove:hover { color: var(--text); background: rgba(255,255,255,0.08); }
+
+.editor-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 8px; }
+.editor-nav span { font-size: 0.85rem; color: var(--muted); text-align: center; flex: 1; }
+.editor-nav button { padding: 6px 12px; font-size: 0.85rem; }
+
+.status-banner { padding: 10px 12px; border-radius: 6px; margin-bottom: 16px; font-size: 0.88rem; }
+.status-banner.pending { background: rgba(148, 163, 184, 0.15); color: var(--muted); }
+.status-banner.scanning { background: rgba(59, 130, 246, 0.15); color: var(--accent); }
+.status-banner.error { background: rgba(192, 57, 43, 0.15); color: #ff8a80; }
+.status-banner.error a { color: inherit; text-decoration: underline; cursor: pointer; }
+.status-banner.saved { background: rgba(42, 157, 42, 0.15); color: var(--primary); }
 
 /* Toast */
 .toast {

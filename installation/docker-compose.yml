@@ -23,6 +23,34 @@ services:
       - ../data:/app/data    # persist your database outside the container (repo_root/data)
     restart: unless-stopped
 
+  # ── Web mode, NVIDIA GPU-accelerated OCR ───────────────────────────────────
+  # docker compose --profile gpu up app-gpu
+  # Requires: an NVIDIA GPU + driver on the host, and the NVIDIA Container
+  # Toolkit (nvidia-container-toolkit) so Docker can pass the GPU through.
+  # docker-up.sh auto-detects this and uses this service for you.
+  app-gpu:
+    build:
+      context: ..
+      dockerfile: installation/Dockerfile
+      args:
+        GPU_SUPPORT: "true"
+    image: receipt-vault:gpu
+    container_name: receipt_vault_web_gpu
+    profiles: ["gpu"]
+    command: ["python", "main.py", "--web", "--host", "0.0.0.0", "--no-browser"]
+    ports:
+      - "7000"
+    volumes:
+      - ../data:/app/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: ["gpu"]
+
   # ── GUI mode (Linux with X11 forwarding) ──────────────────────────────────
   # docker compose --profile gui up app-gui
   app-gui:

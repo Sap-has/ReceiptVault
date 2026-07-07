@@ -10,6 +10,13 @@
 #   ./docker-up.sh              # web mode (default), builds + starts + follows logs
 #   ./docker-up.sh --gui        # GUI mode (Linux with X11 only)
 #   ./docker-up.sh -d           # web mode, builds + starts, then exits without following logs
+#   ./docker-up.sh --gpu        # force the NVIDIA GPU-accelerated build (auto-detected by default)
+#   ./docker-up.sh --no-gpu     # force the CPU-only build even if an NVIDIA GPU is detected
+#
+# Web mode auto-detects an NVIDIA GPU on the host (via `nvidia-smi`) and, if
+# found, builds/runs the GPU-accelerated image instead - this needs the
+# NVIDIA Container Toolkit installed on the host so Docker can pass the GPU
+# through. See the app-gpu service in docker-compose.yml.
 #
 # This script lives in installation/ alongside docker-compose.yml, but can be
 # run from anywhere (e.g. `./installation/docker-up.sh` from the repo root) -
@@ -33,16 +40,32 @@ fi
 
 GUI_MODE=false
 DETACHED=false
+GPU_MODE=""    # "" = auto-detect, "true" = force GPU, "false" = force CPU
 EXTRA_ARGS=()
 
 for arg in "$@"; do
     case "$arg" in
         --gui)        GUI_MODE=true ;;
         -d|--detach)  DETACHED=true ;;
+        --gpu)        GPU_MODE=true ;;
+        --no-gpu)     GPU_MODE=false ;;
         --build)      ;;  # already always built below; avoid passing it twice
         *)            EXTRA_ARGS+=("$arg") ;;
     esac
 done
+
+# Auto-detect an NVIDIA GPU on the host unless --gpu/--no-gpu forced a choice.
+# nvidia-smi only exists when the NVIDIA driver is installed on the host, so
+# its presence is a solid enough signal that GPU passthrough will work
+# (assuming the NVIDIA Container Toolkit is also installed - see the
+# app-gpu service in docker-compose.yml for what that enables).
+if [ -z "$GPU_MODE" ]; then
+    if command -v nvidia-smi &>/dev/null && nvidia-smi -L 2>/dev/null | grep -q GPU; then
+        GPU_MODE=true
+    else
+        GPU_MODE=false
+    fi
+fi
 
 echo "Fetching latest repository updates from git..."
 git -C "$REPO_ROOT" fetch --all --prune
@@ -62,14 +85,25 @@ echo "======================================"
 echo " Starting ReceiptVault (Web mode, Docker)"
 echo "======================================"
 
+if [ "$GPU_MODE" = true ]; then
+    echo "[INFO] NVIDIA GPU detected - building the GPU-accelerated image."
+    echo "       (Needs the NVIDIA Container Toolkit on the host. If the"
+    echo "        container fails to start, re-run with --no-gpu.)"
+    SERVICE="app-gpu"
+    PROFILE_ARGS=(--profile gpu)
+else
+    SERVICE="app"
+    PROFILE_ARGS=()
+fi
+
 # Build the image and start the web service in the background so we can
 # inspect the port mapping before deciding whether to attach to logs.
-docker compose build --build-arg NO_AVX=$CHROME_ARG app
-docker compose up -d app "${EXTRA_ARGS[@]}"
+docker compose "${PROFILE_ARGS[@]}" build --build-arg NO_AVX=$CHROME_ARG "$SERVICE"
+docker compose "${PROFILE_ARGS[@]}" up -d "$SERVICE" "${EXTRA_ARGS[@]}"
 
 # Ask Docker which host port it mapped to the container's port 7000.
 # `docker compose port` prints e.g. "0.0.0.0:54827" – we just want the number.
-MAPPING="$(docker compose port app 7000 2>/dev/null || true)"
+MAPPING="$(docker compose "${PROFILE_ARGS[@]}" port "$SERVICE" 7000 2>/dev/null || true)"
 HOST_PORT="${MAPPING##*:}"
 
 echo ""
@@ -93,11 +127,11 @@ echo ""
 trap_handler() {
     echo ""
     echo "Stopping ReceiptVault..."
-    docker compose down
+    docker compose "${PROFILE_ARGS[@]}" down
     exit 0
 }
 trap trap_handler SIGINT SIGTERM
 
 # Attach to logs so the experience matches `docker compose up` running in
 # the foreground. Ctrl+C will trigger the trap above and stop the container.
-docker compose logs -f app
+docker compose logs -f "$SERVICE"

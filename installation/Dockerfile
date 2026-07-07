@@ -27,10 +27,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # ./docker-up.sh still work exactly as before without any extra flags.
 WORKDIR /app
 
-ARG NO_AVX=false 
+ARG NO_AVX=false
 
-COPY installation/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# GPU_SUPPORT controls which paddlepaddle build gets installed for OCR:
+#   false (default) -> CPU-only paddlepaddle (works everywhere)
+#   true             -> paddlepaddle-gpu (needs an NVIDIA GPU + drivers on
+#                        the *host*, plus nvidia-container-toolkit so the
+#                        container can see it - see docker-compose.yml's
+#                        app-gpu service and docker-up.sh's auto-detection)
+# paddlepaddle-gpu's pip wheel bundles the CUDA/cuDNN runtime itself, so no
+# nvidia/cuda base image is needed here - the host driver is all that matters.
+ARG GPU_SUPPORT=false
+
+COPY installation/requirements.txt installation/gpu_setup.py ./installation/
+RUN pip install --no-cache-dir -r installation/requirements.txt
+
+RUN if [ "$GPU_SUPPORT" = "true" ]; then \
+        python installation/gpu_setup.py --mode gpu; \
+    else \
+        python installation/gpu_setup.py --mode cpu; \
+    fi
 
 RUN if [ "$NO_AVX" = "true" ]; then \
         pip install onnxruntime rapidocr_onnxruntime; \ 

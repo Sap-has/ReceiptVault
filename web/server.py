@@ -104,7 +104,7 @@ def run_web(host: str = "127.0.0.1", port: int | None = None, open_browser: bool
         data = flask_request.json
         try:
             bill_id = vault.create_bill(
-                date_str=data['date'],
+                date=data['date'],
                 vendor_id=data['vendor_id'],
                 price=float(data['price']),
                 category_ids=data.get('category_ids', [])
@@ -204,4 +204,7 @@ def run_web(host: str = "127.0.0.1", port: int | None = None, open_browser: bool
     if open_browser:
         threading.Timer(1.2, lambda: webbrowser.open(url)).start()
 
-    flask_app.run(host=host, port=port, debug=False)
+    # threaded=True so a long-running batch of /api/scan calls (multi-image
+    # OCR) doesn't block other tabs (e.g. browsing All Receipts) from making
+    # requests while a scan is in progress.
+    flask_app.run(host=host, port=port, debug=False, threaded=True)
