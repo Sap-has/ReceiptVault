@@ -3,7 +3,7 @@
 # On first run macOS may prompt "Allow access" – click OK.
 set -euo pipefail
 
-# This script lives in installation/. The app itself (main.py, gui/, web/,
+# This script lives in installation/. The app itself (main.py, web/,
 # core/, utils.py) lives one level up, at the repo root - move there so
 # git pull, venv, and main.py all resolve correctly, regardless of how this
 # script was launched.
@@ -65,25 +65,7 @@ echo "Checking for an NVIDIA GPU (for OCR acceleration)..."
 python3 "$INSTALL_DIR/gpu_setup.py"
 echo ""
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 4.  Mode selection  (macOS supports both Web and GUI)
-# ─────────────────────────────────────────────────────────────────────────────
-echo "======================================"
-echo " How would you like to run ReceiptVault?"
-echo "======================================"
-echo ""
-echo "  [1] Web Mode  - opens in your browser (recommended)"
-echo "  [2] GUI Mode  - native desktop window"
-echo ""
-read -rp "Enter 1 or 2 (default 1): " MODE
-MODE="${MODE:-1}"
 
-if [ "$MODE" = "2" ]; then
-    echo ""
-    echo "Starting in GUI mode..."
-    python3 main.py --gui
-else
-    echo ""
-    echo "Starting in Web mode..."
-    python3 main.py --web
-fi
+echo ""
+echo "Starting in Web mode..."
+python3 main.py --web

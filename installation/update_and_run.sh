@@ -106,36 +106,13 @@ echo "======================================"
 
 if [ "$IS_CHROMEOS" = true ]; then
     # ChromeOS: GUI (Tk) window management is unreliable inside Crostini
-    echo "[ChromeOS] Running in Web mode (GUI mode is not supported on ChromeOS)."
+    echo "[ChromeOS] Running in Web mode"
     echo "           ReceiptVault will pick a free port automatically and open it for you."
     echo ""
     python3 main.py --web
 
-elif [ "$IS_GUI_CAPABLE" = false ]; then
-    # Headless Linux (server, WSL without display, etc.)
-    echo "[Headless] No graphical display detected - running in Web mode."
-    echo "           ReceiptVault will pick a free port automatically (the URL"
-    echo "           to open will be printed below once the server starts)."
-    echo ""
-    python3 main.py --web --no-browser
-
 else
-    # macOS or Linux with a display – offer a choice
-    echo "How would you like to run ReceiptVault?"
-    echo ""
-    echo "  [1] Web Mode  - opens in your browser (recommended)"
-    echo "  [2] GUI Mode  - native desktop window"
-    echo ""
-    read -rp "Enter 1 or 2 (default 1): " MODE
-    MODE="${MODE:-1}"
-
-    if [ "$MODE" = "2" ]; then
-        echo ""
-        echo "Starting in GUI mode..."
-        python3 main.py --gui
-    else
-        echo ""
-        echo "Starting in Web mode..."
-        python3 main.py --web
-    fi
+    echo "Starting in Web mode..."
+    python3 main.py --web
+    
 fi

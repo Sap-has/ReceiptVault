@@ -7,7 +7,7 @@ echo ======================================
 echo.
 
 :: ── Locate folders ─────────────────────────────────────────────────────────
-:: This script lives in installation\. The actual app (main.py, gui\, web\,
+:: This script lives in installation\. The actual app (main.py, web\,
 :: core\, utils.py) lives one level up, at the repo root, so we resolve both
 :: paths up front and cd between them as needed below.
 set "INSTALL_DIR=%~dp0"
@@ -50,25 +50,9 @@ echo Checking for an NVIDIA GPU (for OCR acceleration)...
 python "%INSTALL_DIR%gpu_setup.py"
 echo.
 
-:: ── Mode selection ─────────────────────────────────────────────────────────
-echo How would you like to run ReceiptVault?
-echo.
-echo   [1] Web Mode   - opens in your browser  (recommended for most users)
-echo   [2] GUI Mode   - native desktop window
-echo.
-set /p MODE="Enter 1 or 2 (default 1): "
+echo Starting in Web mode...
+python main.py --web
 
-if "%MODE%"=="" set MODE=1
-
-if "%MODE%"=="2" (
-    echo.
-    echo Starting in GUI mode...
-    python main.py --gui
-) else (
-    echo.
-    echo Starting in Web mode...
-    python main.py --web
-)
 
 pause
 endlocal

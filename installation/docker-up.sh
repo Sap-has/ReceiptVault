@@ -8,7 +8,6 @@
 #
 # Usage:
 #   ./docker-up.sh              # web mode (default), builds + starts + follows logs
-#   ./docker-up.sh --gui        # GUI mode (Linux with X11 only)
 #   ./docker-up.sh -d           # web mode, builds + starts, then exits without following logs
 #   ./docker-up.sh --gpu        # force the NVIDIA GPU-accelerated build (auto-detected by default)
 #   ./docker-up.sh --no-gpu     # force the CPU-only build even if an NVIDIA GPU is detected
@@ -38,14 +37,12 @@ else
     CHROME_ARG="true"
 fi
 
-GUI_MODE=false
 DETACHED=false
 GPU_MODE=""    # "" = auto-detect, "true" = force GPU, "false" = force CPU
 EXTRA_ARGS=()
 
 for arg in "$@"; do
     case "$arg" in
-        --gui)        GUI_MODE=true ;;
         -d|--detach)  DETACHED=true ;;
         --gpu)        GPU_MODE=true ;;
         --no-gpu)     GPU_MODE=false ;;
@@ -73,13 +70,6 @@ git -C "$REPO_ROOT" fetch --all --prune
 echo "Updating repository from git before starting Docker..."
 git -C "$REPO_ROOT" pull --ff-only
 
-if [ "$GUI_MODE" = true ]; then
-    echo "Starting ReceiptVault in GUI mode (Docker, Linux/X11)..."
-    xhost +local:docker 2>/dev/null || true
-    
-    docker compose --profile gui build --build-arg NO_AVX=$CHROME_ARG app-gui
-    exec docker compose --profile gui up app-gui "${EXTRA_ARGS[@]}"
-fi
 
 echo "======================================"
 echo " Starting ReceiptVault (Web mode, Docker)"
