@@ -46,7 +46,7 @@ def find_free_port(host: str = "127.0.0.1", start_port: int = DEFAULT_PORT,
     )
 
 
-def run_web(host: str = "127.0.0.1", port: int | None = None, open_browser: bool = True):
+def run_web(host: str = "0.0.0.0", port: int | None = None, open_browser: bool = True):
     """Start the Flask web server.
 
     If `port` is None, the next available port starting at DEFAULT_PORT
@@ -91,19 +91,6 @@ def run_web(host: str = "127.0.0.1", port: int | None = None, open_browser: bool
     @flask_app.route("/")
     def index():
         return render_template("index.html")
-
-    # Route for the PWA Manifest
-    @flask_app.route('/manifest.json')
-    def serve_manifest():
-        return send_from_directory(os.path.join(flask_app.root_path, 'static'), 'manifest.json')
-
-    # Route for the PWA Service Worker
-    @flask_app.route('/sw.js')
-    def serve_sw():
-        # We must explicitly set the content-type header for service workers
-        response = send_from_directory(os.path.join(flask_app.root_path, 'static'), 'sw.js')
-        response.headers['Content-Type'] = 'application/javascript'
-        return response
 
     # --- Bills ---
     @flask_app.route("/api/bills", methods=["GET"])

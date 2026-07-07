@@ -17,7 +17,7 @@ services:
     container_name: receipt_vault_web
     command: ["python", "main.py", "--web", "--host", "0.0.0.0", "--no-browser"]
     ports:
-      - "7000"
+      - "7777:7000"
     volumes:
       - ../data:/app/data    # persist your database outside the container (repo_root/data)
     restart: unless-stopped
@@ -38,7 +38,7 @@ services:
     profiles: ["gpu"]
     command: ["python", "main.py", "--web", "--host", "0.0.0.0", "--no-browser"]
     ports:
-      - "7000"
+      - "7777:7000"
     volumes:
       - ../data:/app/data
     restart: unless-stopped
