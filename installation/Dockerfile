@@ -16,6 +16,13 @@ COPY installation/requirements.txt installation/gpu_setup.py ./installation/
 RUN pip install --no-cache-dir --user -r installation/requirements.txt
 
 ARG GPU_SUPPORT=false
+# gpu_setup.py calls plain `pip install` (no --user) since it's also used by
+# the native venv launchers, where --user would error. Forcing it here via
+# env var (equivalent to --user) ensures paddlepaddle/paddlepaddle-gpu lands
+# in /root/.local like requirements.txt above, so it survives the COPY into
+# the final stage below instead of being installed into the builder's
+# global site-packages and silently discarded.
+ENV PIP_USER=1
 RUN if [ "$GPU_SUPPORT" = "true" ]; then \
         python installation/gpu_setup.py --mode gpu; \
     else \

@@ -93,9 +93,15 @@
           </div>
 
           <div id="tab-ocr" class="tab-content" style="display: none;">
-            <div class="form-group">
-              <label>Select Images</label>
-              <input type="file" id="ocr-file" accept="image/*" multiple onchange="handleFileSelect(event)">
+            <div class="dropzone" id="ocr-dropzone">
+              <div class="dropzone-icon">🧾</div>
+              <p class="dropzone-text">Drag receipt images here, or:</p>
+              <div class="dropzone-buttons">
+                <button type="button" class="btn-secondary" onclick="document.getElementById('ocr-file-camera').click()">📷 Take Photo</button>
+                <button type="button" class="btn-secondary" onclick="document.getElementById('ocr-file-gallery').click()">🖼️ Choose Photos</button>
+              </div>
+              <input type="file" id="ocr-file-camera" accept="image/*" capture="environment" onchange="handleFileSelect(event)" hidden>
+              <input type="file" id="ocr-file-gallery" accept="image/*" multiple onchange="handleFileSelect(event)" hidden>
             </div>
 
             <div class="ocr-batch-layout">
@@ -156,6 +162,7 @@
     </main>
   </div>
 
+  <div class="toast" id="toast"></div>
   <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

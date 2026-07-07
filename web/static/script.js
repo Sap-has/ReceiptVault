@@ -219,7 +219,10 @@ let queueIdCounter = 0;
 function handleFileSelect(event) {
   const files = Array.from(event.target.files || []);
   event.target.value = ''; // Allow re-selecting identical files later
+  addFilesToQueue(files);
+}
 
+function addFilesToQueue(files) {
   if (!files.length) return;
   if (files.length > 25) showToast(`Queued ${files.length} images - this may take a while.`);
 
@@ -234,6 +237,28 @@ function handleFileSelect(event) {
   renderQueue();
   if (state.currentQueueId === null) selectQueueItem(state.queue[0].id);
   processQueue();
+}
+
+function initDropzone() {
+  const zone = document.getElementById('ocr-dropzone');
+  if (!zone) return;
+
+  ['dragenter', 'dragover'].forEach(evt => zone.addEventListener(evt, e => {
+    e.preventDefault();
+    e.stopPropagation();
+    zone.classList.add('drag-active');
+  }));
+
+  ['dragleave', 'drop'].forEach(evt => zone.addEventListener(evt, e => {
+    e.preventDefault();
+    e.stopPropagation();
+    zone.classList.remove('drag-active');
+  }));
+
+  zone.addEventListener('drop', e => {
+    const files = Array.from(e.dataTransfer?.files || []).filter(f => f.type.startsWith('image/'));
+    addFilesToQueue(files);
+  });
 }
 
 async function processQueue() {
@@ -435,5 +460,6 @@ async function updateApp() {
 }
 
 // Init Application
-fetchVendors(); 
+fetchVendors();
 fetchCategories();
+initDropzone();
