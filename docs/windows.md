@@ -76,8 +76,6 @@ Double-click the batch file or run:
 installation\run_app.bat
 ```
 
-You will be asked whether to start Web Mode or GUI Mode.
-
 ---
 
 ## 4. Using the App
@@ -87,13 +85,8 @@ You will be asked whether to start Web Mode or GUI Mode.
 - Best for most users
 - The app will show the assigned local address and port
 
-### GUI Mode
-- Opens a desktop window
-- Works with a graphical Windows desktop session
-
 ### Stopping the app
 - Web mode: press Ctrl+C in the terminal
-- GUI mode: close the window
 - Docker: press Ctrl+C or run `docker compose down` from the installation folder
 
 ---
@@ -141,11 +134,9 @@ Check that Docker Desktop is running and that virtualization is enabled in your 
 ```powershell
 python main.py --web
 python main.py --web --port 8080
-python main.py --gui
 ```
 
 | Command | Description |
 |---|---|
 | `python main.py --web` | Start the web interface |
 | `python main.py --web --port 8080` | Pin a specific port |
-| `python main.py --gui` | Start the desktop GUI |
