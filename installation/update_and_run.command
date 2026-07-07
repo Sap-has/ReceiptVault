@@ -11,19 +11,6 @@ INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$INSTALL_DIR/.."
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1.  Auto-update
-# ─────────────────────────────────────────────────────────────────────────────
-echo "======================================"
-echo " Checking for updates..."
-echo "======================================"
-if [ -d ".git" ]; then
-    git pull origin main || echo "[WARN] Git pull failed - continuing with current version."
-else
-    echo "[INFO] Not a git repository - skipping auto-update."
-fi
-echo ""
-
-# ─────────────────────────────────────────────────────────────────────────────
 # 2.  Python check
 # ─────────────────────────────────────────────────────────────────────────────
 PYTHON=""

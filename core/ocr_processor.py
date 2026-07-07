@@ -96,9 +96,6 @@ def _get_ocr():
                 # Default on Jul 2, 2026 is PP-OCRvy_medium
                 ocr_version="PP-OCRv6",
                 lang="en",
-
-                # Run on the NVIDIA GPU when one is available and usable;
-                # otherwise fall back to the CPU. See _resolve_device().
                 device=device,
 
                 # --- 1. Geometric & Document Preprocessing ---

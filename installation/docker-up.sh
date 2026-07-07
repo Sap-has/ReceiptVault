@@ -30,13 +30,6 @@ REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 # docker-compose.yml regardless of the caller's current working directory.
 cd "$SCRIPT_DIR"
 
-if grep -q avx /proc/cpuinfo; then
-    CHROME_ARG="false"
-else
-    echo "[INFO] AVX not detected on host CPU. Enabling compatibility mode."
-    CHROME_ARG="true"
-fi
-
 DETACHED=false
 GPU_MODE=""    # "" = auto-detect, "true" = force GPU, "false" = force CPU
 EXTRA_ARGS=()
@@ -64,13 +57,6 @@ if [ -z "$GPU_MODE" ]; then
     fi
 fi
 
-echo "Fetching latest repository updates from git..."
-git -C "$REPO_ROOT" fetch --all --prune
-
-echo "Updating repository from git before starting Docker..."
-git -C "$REPO_ROOT" pull --ff-only
-
-
 echo "======================================"
 echo " Starting ReceiptVault (Web mode, Docker)"
 echo "======================================"
@@ -88,7 +74,7 @@ fi
 
 # Build the image and start the web service in the background so we can
 # inspect the port mapping before deciding whether to attach to logs.
-docker compose "${PROFILE_ARGS[@]}" build --build-arg NO_AVX=$CHROME_ARG "$SERVICE"
+docker compose "${PROFILE_ARGS[@]}" build "$SERVICE"
 docker compose "${PROFILE_ARGS[@]}" up -d "$SERVICE" "${EXTRA_ARGS[@]}"
 
 # Ask Docker which host port it mapped to the container's port 7000.

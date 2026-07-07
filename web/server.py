@@ -55,7 +55,7 @@ def run_web(host: str = "0.0.0.0", port: int | None = None, open_browser: bool =
     will raise its normal error if it's already taken.
     """
     try:
-        from flask import Flask, jsonify, render_template, send_from_directory, request as flask_request
+        from flask import Flask, jsonify, render_template, request as flask_request
     except ImportError:
         print(
             "\n[ERROR] Flask is not installed. Run:  pip install flask\n"
