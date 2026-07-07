@@ -6,14 +6,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # ── System dependencies ───────────────────────────────────────────────────────
 # libgl1 / libglib2.0-0  → required by OpenCV / PaddleOCR
-# libx11-6 / python3-tk  → required for customtkinter GUI mode
 # sqlite3                → CLI tool (the Python module is built-in)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libgomp1 \
     libglib2.0-0 \
-    libx11-6 \
-    python3-tk \
     sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
