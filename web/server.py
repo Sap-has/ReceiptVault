@@ -46,33 +46,6 @@ def find_free_port(host: str = "127.0.0.1", start_port: int = DEFAULT_PORT,
     )
 
 
-def _get_lan_addresses() -> list[str]:
-    """Best-effort discovery of this machine's LAN-reachable IPv4 addresses
-    (Wi-Fi, Ethernet, USB tethering, etc.) so a phone on the same network
-    can be pointed at the app without the user hunting for the IP manually.
-    """
-    addresses = set()
-
-    try:
-        probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            probe.connect(("8.8.8.8", 80))
-            addresses.add(probe.getsockname()[0])
-        finally:
-            probe.close()
-    except OSError:
-        pass
-
-    try:
-        for ip in socket.gethostbyname_ex(socket.gethostname())[2]:
-            if not ip.startswith("127."):
-                addresses.add(ip)
-    except OSError:
-        pass
-
-    return sorted(addresses)
-
-
 def run_web(host: str = "0.0.0.0", port: int | None = None, open_browser: bool = True):
     """Start the Flask web server.
 
@@ -144,6 +117,38 @@ def run_web(host: str = "0.0.0.0", port: int | None = None, open_browser: bool =
     def delete_bill(bill_id):
         success = vault.delete_bill(bill_id)
         return jsonify({"success": success})
+    
+    @flask_app.route("/api/bills/<int:bill_id>", methods=["PUT"])
+    def update_bill_route(bill_id):
+        data = flask_request.json
+        try:
+            # Resolve vendor name into id if given text dynamically
+            vendor_name = data.get('vendor_name', '').strip()
+            vendor_id = data.get('vendor_id', -1)
+            if vendor_name and vendor_id == -1:
+                vendor_id = vault.get_or_create_vendor(vendor_name)
+
+            success = vault.update_bill(
+                bill_id=bill_id,
+                date=data.get('date'),
+                vendor_id=vendor_id if vendor_id != -1 else None,
+                price=float(data['price']) if 'price' in data else None,
+                category_ids=data.get('category_ids'),
+                image_path=data.get('image_path')
+            )
+            return jsonify({"success": success})
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 400
+    
+    @flask_app.route("/api/bills/bulk-delete", methods=["POST"])
+    def bulk_delete_bills():
+        data = flask_request.json or {}
+        bill_ids = data.get("ids", [])
+        deleted_count = 0
+        for bid in bill_ids:
+            if vault.delete_bill(bid):
+                deleted_count += 1
+        return jsonify({"success": True, "deleted": deleted_count})
 
     # --- Vendors ---
     @flask_app.route("/api/vendors", methods=["GET"])
@@ -203,21 +208,6 @@ def run_web(host: str = "0.0.0.0", port: int | None = None, open_browser: bool =
             })
         except Exception as e:
             return jsonify({"error": str(e)}), 500
-    
-
-    # --- Network / phone connect ---
-    @flask_app.route("/api/network-info", methods=["GET"])
-    def network_info():
-        addresses = _get_lan_addresses()
-        reachable = host in ("0.0.0.0", "")
-        urls = [f"http://{ip}:{port}" for ip in addresses] if reachable else []
-        return jsonify({
-            "port": port,
-            "host": host,
-            "reachable_from_phone": reachable,
-            "addresses": addresses,
-            "urls": urls,
-        })
 
     # --- System ---
     @flask_app.route("/api/update", methods=["POST"])

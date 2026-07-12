@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ReceiptVault</title>
 
+  <link rel="icon" href="data:;base64,iVBORw0KGgo=">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -46,6 +47,7 @@
             <table id="bills-table">
               <thead>
                 <tr>
+                  <th style="width: 40px;"><input type="checkbox" id="select-all-checkbox" onclick="toggleAllCheckboxes(this)"></th>
                   <th>Date ↓</th>
                   <th>Vendor</th>
                   <th>Price</th>
@@ -58,8 +60,48 @@
           </div>
 
           <div class="action-bar">
-            <span id="selected-receipt-label">No receipt selected</span>
+            <span id="selected-receipt-label">0 receipt selected</span>
             <button class="btn-danger" onclick="deleteSelectedReceipt()" id="btn-delete-receipt" disabled>Delete Selected</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="edit-receipt-modal" class="modal-overlay">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>Edit Receipt Entry</h3>
+            <span class="modal-close" onclick="closeEditModal()">&times;</span>
+          </div>
+          <div class="modal-body-layout">
+            <div class="modal-preview-pane">
+              <img id="modal-img-view" src="" alt="Receipt Document Copy" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\'><rect width=\'100\' height=\'100\' fill=\'%23222\'/><text x=\'50%\' y=\'50%\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23666\'>No Image Available</text></svg>'">
+            </div>
+            <div class="modal-inputs-pane">
+              <input type="hidden" id="edit-bill-id">
+              <div class="form-group">
+                <label>Vendor</label>
+                <input type="text" id="edit-vendor-name">
+              </div>
+              <div class="form-group">
+                <label>Price ($)</label>
+                <input type="number" id="edit-price" step="0.01">
+              </div>
+              <div class="form-group">
+                <label>Date</label>
+                <input type="date" id="edit-date">
+              </div>
+              <div class="form-group">
+                <label>Categories</label>
+                <div class="checkbox-group" id="edit-categories-list"></div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer-bar">
+            <button class="btn-danger" onclick="deleteBillFromModal()">Delete</button>
+            <div style="display:flex; gap:10px;">
+              <button class="btn-secondary-sm" onclick="closeEditModal()">Discard Changes</button>
+              <button class="btn-primary" style="width:auto; padding:8px 24px;" onclick="saveModalEdits()">Save</button>
+            </div>
           </div>
         </div>
       </div>

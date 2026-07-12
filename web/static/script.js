@@ -459,6 +459,163 @@ async function updateApp() {
   showToast('Update initiated. App will restart.');
 }
 
+// Append row check configurations onto state setup
+state.checkedBillIds = new Set();
+
+async function fetchBills() {
+  const search = document.getElementById('search-bills').value.toLowerCase();
+  const vid = document.getElementById('filter-vendor').value;
+  const cid = document.getElementById('filter-category').value;
+  
+  const query = new URLSearchParams();
+  if (vid) query.append('vendor_id', vid);
+  if (cid) query.append('category_id', cid);
+
+  const bills = await api(`/api/bills?${query.toString()}`);
+  state.bills = bills; // Cache globally
+  const tbody = document.querySelector('#bills-table tbody');
+  
+  const filtered = bills.filter(b => 
+    `${b.vendor} ${b.date} ${b.categories.map(c=>c.category_name).join(' ')}`.toLowerCase().includes(search)
+  );
+
+  // Clear tracking sets if records disappear from visible array filter configurations
+  document.getElementById('select-all-checkbox').checked = false;
+
+  tbody.innerHTML = filtered.map(b => {
+    const isChecked = state.checkedBillIds.has(b.id) ? 'checked' : '';
+    return `
+      <tr onclick="openEditModal(${b.id})">
+        <td onclick="event.stopPropagation();">
+          <input type="checkbox" class="row-checkbox" data-id="${b.id}" ${isChecked} onchange="handleRowCheckChange(this, ${b.id})">
+        </td>
+        <td>${b.date}</td>
+        <td>${b.vendor || '(no vendor)'}</td>
+        <td>$${b.price.toFixed(2)}</td>
+        <td>${b.categories.map(c=>c.category_name).join(', ')}</td>
+        <td>${b.id}</td>
+      </tr>
+    `;
+  }).join('');
+
+  updateBulkActionUI();
+}
+
+function handleRowCheckChange(checkbox, id) {
+  if (checkbox.checked) {
+    state.checkedBillIds.add(id);
+  } else {
+    state.checkedBillIds.delete(id);
+  }
+  updateBulkActionUI();
+}
+
+function toggleAllCheckboxes(masterCheckbox) {
+  const checkboxes = document.querySelectorAll('.row-checkbox');
+  checkboxes.forEach(cb => {
+    const id = parseInt(cb.getAttribute('data-id'));
+    cb.checked = masterCheckbox.checked;
+    if (masterCheckbox.checked) {
+      state.checkedBillIds.add(id);
+    } else {
+      state.checkedBillIds.delete(id);
+    }
+  });
+  updateBulkActionUI();
+}
+
+function updateBulkActionUI() {
+  const count = state.checkedBillIds.size;
+  document.getElementById('selected-receipt-label').textContent = `${count} receipt${count !== 1 ? 's' : ''} selected`;
+  document.getElementById('btn-delete-receipt').disabled = count === 0;
+}
+
+async function deleteSelectedReceipts() {
+  const idsToDelete = Array.from(state.checkedBillIds);
+  if (!idsToDelete.length) return;
+
+  if (confirm(`Are you absolutely sure you want to permanently delete these ${idsToDelete.length} selected receipt records?`)) {
+    const response = await api('/api/bills/bulk-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: idsToDelete })
+    });
+    
+    if (response.success) {
+      showToast(`Successfully deleted ${response.deleted} receipts.`);
+      state.checkedBillIds.clear();
+      fetchBills();
+    } else {
+      showToast('Error executing requested sequence removal.', true);
+    }
+  }
+}
+
+// --- Popup Modal Architecture Control Methods ---
+function openEditModal(billId) {
+  const bill = state.bills.find(b => b.id === billId);
+  if (!bill) return;
+
+  document.getElementById('edit-bill-id').value = bill.id;
+  document.getElementById('edit-vendor-name').value = bill.vendor || '';
+  document.getElementById('edit-price').value = bill.price || '';
+  document.getElementById('edit-date').value = bill.date || '';
+  document.getElementById('modal-img-view').src = bill.image_path || '';
+
+  // Render categories with matching tags checked
+  const currentCategoryIds = new Set(bill.categories.map(c => c.id));
+  document.getElementById('edit-categories-list').innerHTML = state.categories.map(c => `
+    <label><input type="checkbox" class="modal-cat-box" value="${c.id}" ${currentCategoryIds.has(c.id) ? 'checked' : ''}> ${c.category_name}</label>
+  `).join('');
+
+  document.getElementById('edit-receipt-modal').classList.add('active');
+}
+
+function closeEditModal() {
+  document.getElementById('edit-receipt-modal').classList.remove('active');
+}
+
+async function saveModalEdits() {
+  const id = document.getElementById('edit-bill-id').value;
+  const vendorName = document.getElementById('edit-vendor-name').value.trim();
+  const price = document.getElementById('edit-price').value;
+  const date = document.getElementById('edit-date').value;
+  
+  const categoryIds = Array.from(document.querySelectorAll('.modal-cat-box:checked'))
+    .map(cb => parseInt(cb.value));
+
+  if (!price || !date) {
+    return showToast('Price and Date are required values.', true);
+  }
+
+  const response = await api(`/api/bills/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ vendor_name: vendorName, price, date, category_ids: categoryIds })
+  });
+
+  if (response.success) {
+    showToast('Receipt changes updated smoothly.');
+    closeEditModal();
+    fetchBills();
+  } else {
+    showToast(response.error || 'Failed saving changes.', true);
+  }
+}
+
+async function deleteBillFromModal() {
+  const id = parseInt(document.getElementById('edit-bill-id').value);
+  if (confirm('Are you sure you want to completely remove this receipt record?')) {
+    const response = await api(`/api/bills/${id}`, { method: 'DELETE' });
+    if (response.success) {
+      showToast('Receipt deleted successfully.');
+      state.checkedBillIds.delete(id);
+      closeEditModal();
+      fetchBills();
+    }
+  }
+}
+
 // Init Application
 fetchVendors();
 fetchCategories();

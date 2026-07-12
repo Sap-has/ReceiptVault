@@ -144,6 +144,46 @@ tr.selected { background: rgba(59, 130, 246, 0.2); }
 }
 .toast.show { bottom: 30px; }
 
+
+/* Custom Popups Architecture Overlay Stylesheet Core Layout */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.75); display: flex; align-items: center; justify-content: center;
+    z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.2s ease-in-out;
+}
+.modal-overlay.active { opacity: 1; pointer-events: auto; }
+.modal-card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+    width: 90vw; max-width: 800px; max-height: 85vh; display: flex; flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden;
+}
+.modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 24px; border-bottom: 1px solid var(--border); background: rgba(0,0,0,0.1);
+}
+.modal-header h3 { margin: 0; font-size: 1.3rem; }
+.modal-close { font-size: 1.5rem; cursor: pointer; color: var(--muted); }
+.modal-close:hover { color: var(--text); }
+
+.modal-body-layout { display: flex; gap: 24px; padding: 24px; overflow-y: auto; flex: 1; }
+.modal-preview-pane {
+    flex: 1; background: #000; border-radius: 8px; display: flex;
+    align-items: center; justify-content: center; overflow: hidden; min-height: 250px; max-height: 400px;
+}
+.modal-preview-pane img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.modal-inputs-pane { flex: 1; display: flex; flex-direction: column; gap: 14px; }
+
+.modal-footer-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 24px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.1);
+}
+
+@media (max-width: 640px) {
+    .modal-body-layout { flex-direction: column; }
+    .modal-preview-pane { min-height: 180px; }
+}
+
+
 /* Mobile */
 @media (max-width: 768px) {
     .app-shell {

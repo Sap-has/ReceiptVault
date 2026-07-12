@@ -6,8 +6,7 @@ import sqlite3
 # ---------------------------------------------------------------------------
 
 '''
-This file should contain only SQL logic, Table creation (the init_db method), and raw data retrieval methods. It should not import Flask or CustomTkinter.
-Web app and Desktop app will call the exact same functions to get data, ensuring consistency across both interfaces.
+This file should contain only SQL logic, Table creation (the init_db method), and raw data retrieval methods.
 '''
 
 class ReceiptVault:
@@ -50,6 +49,7 @@ class ReceiptVault:
                 date       TEXT    NOT NULL,          -- Format: YYYY-MM-DD
                 vendor_id  INTEGER,
                 price      REAL    CHECK(price > 0),
+                image_path TEXT,                       -- Path or URL to receipt image
                 created_at TEXT    DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT    DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (vendor_id) REFERENCES vendors (id) ON DELETE SET NULL
@@ -58,7 +58,7 @@ class ReceiptVault:
         # 4. Trigger – auto-update 'updated_at' on edit
         self.cur.execute("""
             CREATE TRIGGER IF NOT EXISTS update_bills_timestamp
-            AFTER UPDATE OF date, vendor_id, price ON bills
+            AFTER UPDATE OF date, vendor_id, price, image_path ON bills
             BEGIN
                 UPDATE bills SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
             END;""")
@@ -308,7 +308,7 @@ class ReceiptVault:
         return bills
 
     def create_bill(self, date: str, vendor_id: int | None, price: float,
-                     category_ids: list[int] | None = None) -> int:
+                     category_ids: list[int] | None = None, image_path: str | None = None) -> int:
         """
         Insert a new bill. `date` should be 'YYYY-MM-DD'. `vendor_id` may be
         None (a receipt with no vendor recorded yet). `category_ids`, if
@@ -317,7 +317,7 @@ class ReceiptVault:
         """
         cur = self.conn.execute(
             "INSERT INTO bills (date, vendor_id, price) VALUES (?, ?, ?)",
-            (date, vendor_id, price),
+            (date, vendor_id, price, image_path),
         )
         bill_id = cur.lastrowid
         self.conn.commit()
@@ -334,7 +334,7 @@ class ReceiptVault:
         that used to live directly in the /api/bills Flask route.
         """
         rows = self.conn.execute("""
-            SELECT b.id, b.date, b.vendor_id, v.name AS vendor, b.price,
+            SELECT b.id, b.date, b.vendor_id, v.name AS vendor, b.price, b.image_path,
                    b.created_at, b.updated_at
             FROM   bills b
             LEFT JOIN vendors v ON b.vendor_id = v.id
@@ -346,7 +346,7 @@ class ReceiptVault:
     def get_bill_by_id(self, bill_id: int) -> dict | None:
         """Return a single bill dict (with vendor + categories), or None."""
         row = self.conn.execute("""
-            SELECT b.id, b.date, b.vendor_id, v.name AS vendor, b.price,
+            SELECT b.id, b.date, b.vendor_id, v.name AS vendor, b.price, b.image_path,
                    b.created_at, b.updated_at
             FROM   bills b
             LEFT JOIN vendors v ON b.vendor_id = v.id
@@ -392,7 +392,7 @@ class ReceiptVault:
         where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
 
         rows = self.conn.execute(f"""
-            SELECT b.id, b.date, b.vendor_id, v.name AS vendor, b.price,
+            SELECT b.id, b.date, b.vendor_id, v.name AS vendor, b.price, b.image_path,
                    b.created_at, b.updated_at
             FROM   bills b
             LEFT JOIN vendors v ON b.vendor_id = v.id
@@ -405,7 +405,7 @@ class ReceiptVault:
 
     def update_bill(self, bill_id: int, date: str | None = None,
                      vendor_id: int | None = -1, price: float | None = None,
-                     category_ids: list[int] | None = None) -> bool:
+                     category_ids: list[int] | None = None, image_path: str | None = None) -> bool:
         """
         Partially update a bill - only fields you pass are changed.
 
@@ -438,6 +438,9 @@ class ReceiptVault:
         if price is not None:
             fields.append("price = ?")
             params.append(price)
+        if image_path is not None:
+            fields.append("image_path = ?")
+            params.append(image_path)
 
         if fields:
             params.append(bill_id)
