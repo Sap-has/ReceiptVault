@@ -1,7 +1,8 @@
 // --- State & Utility ---
 let state = {
-  bills: [], vendors: [], categories: [], selectedBillId: null,
+  bills: [], vendors: [], categories: [],
   queue: [], currentQueueId: null, queueProcessing: false,
+  checkedBillIds: new Set(),
 };
 
 async function api(url, options = {}) {
@@ -45,55 +46,8 @@ function switchTab(tabId) {
 }
 
 // --- Data Fetching & Rendering ---
-// Bills
-async function fetchBills() {
-  const search = document.getElementById('search-bills').value.toLowerCase();
-  const vid = document.getElementById('filter-vendor').value;
-  const cid = document.getElementById('filter-category').value;
-  
-  const query = new URLSearchParams();
-  if (vid) query.append('vendor_id', vid);
-  if (cid) query.append('category_id', cid);
-
-  const bills = await api(`/api/bills?${query.toString()}`);
-  const tbody = document.querySelector('#bills-table tbody');
-  
-  const filtered = bills.filter(b => 
-    `${b.vendor} ${b.date} ${b.categories.map(c=>c.category_name).join(' ')}`.toLowerCase().includes(search)
-  );
-
-  tbody.innerHTML = filtered.map(b => `
-    <tr onclick="selectBill(${b.id}, '${b.vendor || '(no vendor)'}', this)">
-      <td>${b.date}</td>
-      <td>${b.vendor || '(no vendor)'}</td>
-      <td>$${b.price.toFixed(2)}</td>
-      <td>${b.categories.map(c=>c.category_name).join(', ')}</td>
-      <td>${b.id}</td>
-    </tr>
-  `).join('');
-
-  state.selectedBillId = null;
-  updateSelectedBillUI();
-}
-
-function selectBill(id, vendor, row) {
-  document.querySelectorAll('#bills-table tr').forEach(r => r.classList.remove('selected'));
-  row.classList.add('selected');
-  state.selectedBillId = id;
-  updateSelectedBillUI(`Selected: #${id} ${vendor}`);
-}
-
-function updateSelectedBillUI(text = 'No receipt selected') {
-  document.getElementById('selected-receipt-label').textContent = text;
-  document.getElementById('btn-delete-receipt').disabled = !state.selectedBillId;
-}
-
-async function deleteSelectedReceipt() {
-  if (!state.selectedBillId) return;
-  await api(`/api/bills/${state.selectedBillId}`, { method: 'DELETE' });
-  showToast(`Receipt #${state.selectedBillId} deleted`);
-  fetchBills();
-}
+// Bills: see fetchBills() further below, which owns the #bills-table
+// rendering (row checkboxes + bulk delete + click-to-edit modal).
 
 // Generic List & Dropdown Functions
 function renderList(containerId, items, labelKey, delFnName) {
@@ -495,9 +449,6 @@ async function updateApp() {
   await api('/api/update', { method: 'POST' });
   showToast('Update initiated. App will restart.');
 }
-
-// Append row check configurations onto state setup
-state.checkedBillIds = new Set();
 
 async function fetchBills() {
   const search = document.getElementById('search-bills').value.toLowerCase();

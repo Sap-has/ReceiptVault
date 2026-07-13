@@ -316,7 +316,7 @@ class ReceiptVault:
         junction table. Returns the new bill's id.
         """
         cur = self.conn.execute(
-            "INSERT INTO bills (date, vendor_id, price) VALUES (?, ?, ?, ?)",
+            "INSERT INTO bills (date, vendor_id, price, image_path) VALUES (?, ?, ?, ?)",
             (date, vendor_id, price, image_path),
         )
         bill_id = cur.lastrowid

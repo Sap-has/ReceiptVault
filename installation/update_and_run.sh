@@ -10,7 +10,16 @@ INSTALL_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$INSTALL_DIR/.."
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 2.  Resolve Python interpreter
+# 2.  Detect platform (used below to tailor the "Python not found" message)
+# ─────────────────────────────────────────────────────────────────────────────
+OS="$(uname -s)"
+IS_CHROMEOS=false
+if [ -f /etc/lsb-release ] && grep -qi "chrome" /etc/lsb-release 2>/dev/null; then
+    IS_CHROMEOS=true
+fi
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3.  Resolve Python interpreter
 # ─────────────────────────────────────────────────────────────────────────────
 PYTHON=""
 for candidate in python3 python; do
@@ -36,7 +45,7 @@ if [ -z "$PYTHON" ]; then
 fi
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 3.  Virtual environment
+# 4.  Virtual environment
 # ─────────────────────────────────────────────────────────────────────────────
 echo "======================================"
 echo " Setting up virtual environment..."
@@ -58,7 +67,7 @@ python3 "$INSTALL_DIR/gpu_setup.py"
 echo ""
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 4.  Mode selection
+# 5.  Mode selection
 # ─────────────────────────────────────────────────────────────────────────────
 echo "======================================"
 echo " Starting ReceiptVault"
