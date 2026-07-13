@@ -3,6 +3,7 @@ flask>=3.0
 
 # OCR (PP-OCRv6) – downloaded model files are cached in ~/.paddlex on first use
 paddleocr
+opencv-python
 
 # NOTE: paddlepaddle itself is intentionally NOT listed here.
 # The launcher scripts (update_and_run.sh / update_and_run.command /

@@ -40,7 +40,7 @@ document.querySelectorAll('.nav-item').forEach(link => {
 function switchTab(tabId) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-  event.target.classList.add('active');
+  document.querySelector(`.tab[onclick*="${tabId}"]`).classList.add('active');
   document.getElementById(`tab-${tabId}`).style.display = 'block';
 }
 
@@ -281,9 +281,46 @@ async function scanQueueItem(item) {
     const res = await fetch('/api/scan', { method: 'POST', body: formData });
     const data = await res.json();
     
-    item.status = data.error ? 'error' : 'done';
-    item.error = data.error || null;
-    item.result = data.error ? null : data;
+    if (data.error) {
+      item.status = 'error';
+      item.error = data.error;
+    } else if (data.results && data.results.length > 0) {
+      // 1. Map the primary extracted receipt to the original queue item
+      const first = data.results[0];
+      item.status = 'done';
+      item.result = first;
+      if (first.image_data_uri) {
+        item.previewUrl = first.image_data_uri; // Replaces full image with the cropped preview
+      }
+
+      // 2. If multiple receipts were detected, inject them into the queue immediately
+      if (data.results.length > 1) {
+        const currentIdx = state.queue.findIndex(q => q.id === item.id);
+        
+        for (let i = 1; i < data.results.length; i++) {
+          const subResult = data.results[i];
+          queueIdCounter++;
+          
+          const newItem = {
+            id: queueIdCounter, 
+            file: null, 
+            name: `${item.name} (Part ${i + 1})`,
+            previewUrl: subResult.image_data_uri,
+            status: 'done', 
+            result: subResult, 
+            error: null, 
+            edited: null, 
+            saved: false,
+          };
+          
+          // Insert the new receipt exactly after the current one
+          state.queue.splice(currentIdx + i, 0, newItem);
+        }
+      }
+    } else {
+      item.status = 'error';
+      item.error = 'No valid data returned';
+    }
   } catch (err) {
     item.status = 'error';
     item.error = 'Network error while scanning';
@@ -614,6 +651,13 @@ async function deleteBillFromModal() {
       fetchBills();
     }
   }
+}
+
+function clearFilters() {
+  document.getElementById('search-bills').value = '';
+  document.getElementById('filter-vendor').value = '';
+  document.getElementById('filter-category').value = '';
+  fetchBills();
 }
 
 // Init Application

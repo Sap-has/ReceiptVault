@@ -193,19 +193,38 @@ def run_web(host: str = "0.0.0.0", port: int | None = None, open_browser: bool =
         file = flask_request.files['image']
         try:
             from core.ocr_processor import scan_receipt
+            from core.image_splitter import extract_receipts
+            import base64
+
             # Save temp file
-            temp = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1])
+            temp_ext = os.path.splitext(file.filename)[1] or '.jpg'
+            temp = tempfile.NamedTemporaryFile(delete=False, suffix=temp_ext)
             file.save(temp.name)
             temp.close()
             
-            result = scan_receipt(temp.name)
-            os.unlink(temp.name)
-            
-            return jsonify({
-                "vendor": result.vendor,
-                "price": result.price,
-                "date_str": result.date_str
-            })
+            receipt_paths = extract_receipts(temp.name)
+
+            results = []
+            for r_path in receipt_paths:
+                result = scan_receipt(r_path)
+                
+                # Convert crop to base64 to update frontend UI preview
+                with open(r_path, "rb") as img_file:
+                    b64_str = base64.b64encode(img_file.read()).decode('utf-8')
+                mime_type = "image/png" if r_path.endswith('.png') else "image/jpeg"
+                data_uri = f"data:{mime_type};base64,{b64_str}"
+                
+                results.append({
+                    "vendor": result.vendor,
+                    "price": result.price,
+                    "date_str": result.date_str,
+                    "image_data_uri": data_uri
+                })
+                
+                # Clean up extracted temp file
+                os.unlink(r_path)
+
+            return jsonify({"results": results})
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
