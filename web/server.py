@@ -19,8 +19,6 @@ It will import update_application from root.utils.py
 # ---------------------------------------------------------------------------
 def _is_port_free(host: str, port: int) -> bool:
     """Return True if `port` can be bound on `host` right now."""
-    # 0.0.0.0 means "all interfaces" - probe the wildcard address itself,
-    # since that's what Flask will actually try to bind to.
     probe_host = host if host not in ("0.0.0.0", "") else "0.0.0.0"
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -29,7 +27,6 @@ def _is_port_free(host: str, port: int) -> bool:
         except OSError:
             return False
         return True
-
 
 def find_free_port(host: str = "127.0.0.1", start_port: int = DEFAULT_PORT,
                     max_attempts: int = 100) -> int:
@@ -45,15 +42,8 @@ def find_free_port(host: str = "127.0.0.1", start_port: int = DEFAULT_PORT,
         f"on {host}. Try freeing up a port or specifying one manually with --port."
     )
 
-
 def run_web(host: str = "0.0.0.0", port: int | None = None, open_browser: bool = True):
-    """Start the Flask web server.
-
-    If `port` is None, the next available port starting at DEFAULT_PORT
-    (7000) is chosen automatically and announced to the user. If `port` is
-    given explicitly (e.g. via --port), that exact port is used and Flask
-    will raise its normal error if it's already taken.
-    """
+    """Start the Flask web server."""
     try:
         from flask import Flask, jsonify, render_template, request as flask_request
     except ImportError:
@@ -79,9 +69,6 @@ def run_web(host: str = "0.0.0.0", port: int | None = None, open_browser: bool =
     vault = ReceiptVault()
     vault.init_db()
 
-    # static_folder / template_folder are resolved relative to this package's
-    # own directory (web/, since that's where server.py lives) — so "static"
-    # and "templates" here correctly point at web/static and web/templates.
     flask_app = Flask(__name__, static_folder="static", template_folder="templates")
 
     # ------------------------------------------------------------------
@@ -107,7 +94,8 @@ def run_web(host: str = "0.0.0.0", port: int | None = None, open_browser: bool =
                 date=data['date'],
                 vendor_id=data['vendor_id'],
                 price=float(data['price']),
-                category_ids=data.get('category_ids', [])
+                category_ids=data.get('category_ids', []),
+                image_path=data.get('image_path')
             )
             return jsonify({"success": True, "id": bill_id})
         except Exception as e:
@@ -125,13 +113,16 @@ def run_web(host: str = "0.0.0.0", port: int | None = None, open_browser: bool =
             # Resolve vendor name into id if given text dynamically
             vendor_name = data.get('vendor_name', '').strip()
             vendor_id = data.get('vendor_id', -1)
+            
             if vendor_name and vendor_id == -1:
                 vendor_id = vault.get_or_create_vendor(vendor_name)
 
             success = vault.update_bill(
                 bill_id=bill_id,
                 date=data.get('date'),
-                vendor_id=vendor_id if vendor_id != -1 else None,
+                # BUG FIX: Pass vendor_id straight through; it relies on the -1 
+                # sentinel in DB layer to denote "unchanged" rather than converting to None
+                vendor_id=vendor_id,
                 price=float(data['price']) if 'price' in data else None,
                 category_ids=data.get('category_ids'),
                 image_path=data.get('image_path')
@@ -154,6 +145,13 @@ def run_web(host: str = "0.0.0.0", port: int | None = None, open_browser: bool =
     @flask_app.route("/api/vendors", methods=["GET"])
     def get_vendors():
         return jsonify(vault.get_all_vendors())
+
+    @flask_app.route("/api/vendors/search", methods=["GET"])
+    def search_vendors():
+        """Wire up the autocomplete vendor search feature."""
+        query = flask_request.args.get('q', '')
+        limit = flask_request.args.get('limit', 8, type=int)
+        return jsonify(vault.search_vendors(query, limit))
 
     @flask_app.route("/api/vendors", methods=["POST"])
     def add_vendor():
@@ -254,7 +252,4 @@ def run_web(host: str = "0.0.0.0", port: int | None = None, open_browser: bool =
     if open_browser:
         threading.Timer(1.2, lambda: webbrowser.open(url)).start()
 
-    # threaded=True so a long-running batch of /api/scan calls (multi-image
-    # OCR) doesn't block other tabs (e.g. browsing All Receipts) from making
-    # requests while a scan is in progress.
     flask_app.run(host=host, port=port, debug=False, threaded=True)

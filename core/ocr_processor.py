@@ -9,15 +9,6 @@ Keeps all OCR-specific code in one place so:
 
 OCR model is loaded lazily on first call to scan_receipt() so that startup
 time is not penalised on users who never scan a receipt.
-
-GPU:
-  If an NVIDIA GPU is present *and* the installed paddlepaddle build supports
-  CUDA (i.e. `paddlepaddle-gpu`, installed automatically by
-  installation/gpu_setup.py when a GPU is detected), PaddleOCR is run on
-  "gpu:0" instead of the CPU. Detection happens once, the first time the OCR
-  engine is created, and always falls back safely to CPU - either because no
-  GPU/CUDA build is available, or because GPU initialisation itself failed
-  for some other reason (driver mismatch, out of memory, etc.).
 """
 
 from __future__ import annotations
@@ -31,25 +22,12 @@ from typing import Optional
 # app keeps working even when paddleocr / paddlepaddle are not installed)
 # ---------------------------------------------------------------------------
 
-_ocr = None           # module-level cache; None means "not yet initialised"
-_ocr_device = None     # the device the live _ocr instance actually ended up on
-
+_ocr = None           
+_ocr_device = None     
 
 def _resolve_device() -> str:
-    """
-    Decide which device PaddleOCR should run inference on.
-
-    Returns "gpu:0" only when BOTH are true:
-      - a CUDA-capable NVIDIA GPU is visible to the driver, and
-      - the installed paddlepaddle build was compiled with CUDA support
-        (the plain PyPI `paddlepaddle` wheel is CPU-only; `paddlepaddle-gpu`
-        is required for this to ever return "gpu:0").
-
-    Falls back to "cpu" in every other case, including if paddle itself
-    isn't installed yet or probing CUDA raises for any reason.
-    """
     try:
-        import paddle  # noqa: PLC0415 (lazy import, mirrors the paddleocr import below)
+        import paddle  # noqa: PLC0415 
     except ImportError:
         return "cpu"
 
@@ -57,16 +35,10 @@ def _resolve_device() -> str:
         if paddle.device.is_compiled_with_cuda() and paddle.device.cuda.device_count() > 0:
             return "gpu:0"
     except Exception:
-        # Any failure while probing CUDA (odd driver state, etc.) - stay safe.
         pass
     return "cpu"
 
-
 def get_device_info() -> dict:
-    """
-    Report which device the OCR engine is (or would be) using. Handy for a
-    "Using GPU" / "Using CPU" indicator in the GUI or web UI, or for tests.
-    """
     device = _ocr_device if _ocr is not None else _resolve_device()
     return {
         "device": device,
@@ -74,13 +46,11 @@ def get_device_info() -> dict:
         "initialized": _ocr is not None,
     }
 
-
 def _get_ocr():
-    """Return the shared PaddleOCR instance, creating it on first call."""
     global _ocr, _ocr_device
     if _ocr is None:
         try:
-            from paddleocr import PaddleOCR  # noqa: PLC0415 (lazy import is intentional)
+            from paddleocr import PaddleOCR  # noqa: PLC0415
         except ImportError as exc:
             raise RuntimeError(
                 "PaddleOCR is not installed. Run:\n"
@@ -89,40 +59,18 @@ def _get_ocr():
             ) from exc
 
         def _build(device: str):
-            # PP-OCRv6_medium – Configured for Maximum Accuracy on Receipts.
-            # Speed and memory usage are deprioritized in favor of handling
-            # faded ink, crumpled paper, skewed angles, and poor lighting.
             return PaddleOCR(
-                # Default on Jul 2, 2026 is PP-OCRvy_medium
                 ocr_version="PP-OCRv6",
                 lang="en",
                 device=device,
-
-                # --- 1. Geometric & Document Preprocessing ---
-                # Corrects upside-down or rotated images
                 use_doc_orientation_classify=True,
-                # Corrects curved/crumpled receipts (vital for handheld photos)
                 use_doc_unwarping=True,
-                # Detects and corrects individual text lines that are skewed
                 use_textline_orientation=True,
-
-                # --- 2. High-Fidelity Detection Limits ---
-                # Default is 960. Receipts are often long; a higher limit prevents
-                # downscaling that destroys small or fine printed text.
                 det_limit_side_len=2048,
-
-                # --- 3. Thresholding for Faded/Thermal Ink ---
-                # Lowering the binarization threshold (default 0.3) helps capture
-                # faint, faded ink on thermal paper in poor lighting.
                 det_db_thresh=0.2,
-                # Lowering the box threshold (default 0.6) prevents discarding
-                # bounding boxes that are faint/low-contrast.
                 det_db_box_thresh=0.3,
-                # Slightly expand bounding boxes (default ~1.5) to prevent edge
-                # characters (like the last digit of a price) from being clipped.
                 det_db_unclip_ratio=1.8,
-
-                enable_mkldnn=False, # Kept getting issues, this worked
+                enable_mkldnn=False, 
             )
 
         device = _resolve_device()
@@ -132,9 +80,6 @@ def _get_ocr():
         except Exception as exc:
             if device == "cpu":
                 raise
-            # GPU looked available but engine init still failed (driver
-            # mismatch, VRAM exhausted, etc.) - degrade gracefully to CPU
-            # rather than taking down the whole Scan feature.
             print(
                 f"[ocr_processor] Could not start PaddleOCR on {device} "
                 f"({exc!r}); falling back to CPU."
@@ -145,7 +90,6 @@ def _get_ocr():
         label = "NVIDIA GPU" if _ocr_device.startswith("gpu") else "CPU"
         print(f"[ocr_processor] OCR engine ready - running on {_ocr_device} ({label}).")
     return _ocr
-
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -163,7 +107,7 @@ class OCRResult:
     ):
         self.vendor = vendor
         self.price = price
-        self.date_str = date_str          # mm/dd/yyyy string for the UI field
+        self.date_str = date_str          
         self.raw_lines: list[str] = raw_lines or []
 
     def __repr__(self) -> str:
@@ -172,15 +116,7 @@ class OCRResult:
             f"date_str={self.date_str!r}, lines={len(self.raw_lines)})"
         )
 
-
 def scan_receipt(image_path: str) -> OCRResult:
-    """
-    Run PP-OCRv6 on *image_path* and return an OCRResult with the best
-    guesses at vendor, price, and date.
-
-    Raises RuntimeError if PaddleOCR is not installed.
-    Raises FileNotFoundError if the image file does not exist.
-    """
     import os
     if not os.path.isfile(image_path):
         raise FileNotFoundError(f"Image not found: {image_path}")
@@ -191,25 +127,20 @@ def scan_receipt(image_path: str) -> OCRResult:
     if not result:
         return _parse_receipt_lines([])
 
-    # PaddleOCR can return a single object/dict or a list depending on version
     res_data = result[0] if isinstance(result, list) else result
     if not res_data:
         return _parse_receipt_lines([])
     
-    # Convert custom Paddle objects to dict if necessary
     if not isinstance(res_data, (dict, list)) and hasattr(res_data, '__dict__'):
         res_data = res_data.__dict__
 
-    boxes: list[tuple[int, int, str]] = []   # (y_min, x_min, text) for sorting
+    boxes: list[tuple[int, int, str]] = []  
 
-    # -- Strategy 1: Dictionary Output (Newer PaddleX / PP-OCRv6) --
     if isinstance(res_data, dict) or hasattr(res_data, 'keys'):
-        # Fallbacks for various PaddleOCR dictionary keys
         polys = res_data.get('dt_polys', res_data.get('res', res_data.get('boxes', [])))
         texts = res_data.get('rec_texts', res_data.get('rec_text', res_data.get('texts', [])))
         
         if polys and texts:
-            # Pair coordinates and text together
             for poly, text_info in zip(polys, texts):
                 text = text_info[0] if isinstance(text_info, (list, tuple)) else text_info
                 if text and str(text).strip():
@@ -219,17 +150,13 @@ def scan_receipt(image_path: str) -> OCRResult:
                         x_min, y_min = 0, 0
                     boxes.append((y_min, x_min, str(text).strip()))
     
-    # -- Strategy 2: Classic Nested List Output --
     elif isinstance(res_data, list):
         for line_data in res_data:
             if not line_data or len(line_data) < 2:
                 continue
             
-            # Robust indexing avoids unpacking errors completely
             box_coords = line_data[0]
             text_info = line_data[1]
-            
-            # Safely get text whether it has a confidence score attached or not
             text = text_info[0] if isinstance(text_info, (list, tuple)) else text_info
             
             if text and str(text).strip():
@@ -239,58 +166,44 @@ def scan_receipt(image_path: str) -> OCRResult:
                     x_min, y_min = 0, 0
                 boxes.append((y_min, x_min, str(text).strip()))
     
-
-    # Sort top-to-bottom, left-to-right (y primary, x secondary)
     boxes.sort(key=lambda b: (b[0], b[1]))
     lines = [b[2] for b in boxes]
 
     return _parse_receipt_lines(lines)
 
-
 # ---------------------------------------------------------------------------
 # Receipt field parsing heuristics
 # ---------------------------------------------------------------------------
-# These operate on a flat list of text lines (sorted top-to-bottom) extracted
-# from the receipt.  They use simple regexes; no ML required at this step.
 
-# ── Date patterns ──────────────────────────────────────────────────────────
-# Covers most receipt date formats:
-#   01/15/2024   01-15-2024   01.15.2024   01/15/24
-#   2024-01-15   2024/01/15   Jan 15 2024  January 15, 2024  15 Jan 2024
 _DATE_PATTERNS = [
-    # MM/DD/YYYY or MM-DD-YYYY or MM.DD.YYYY (with optional 2-digit year)
     (r'\b(\d{1,2})[/\-\.](\d{1,2})[/\-\.](\d{4}|\d{2})\b', "MDY"),
-    # YYYY-MM-DD or YYYY/MM/DD (ISO-ish)
     (r'\b(20\d{2})[/\-\.](\d{1,2})[/\-\.](\d{1,2})\b',     "YMD"),
-    # Month-name formats:  Jan 15 2024 / 15 Jan 2024 / January 15, 2024
-    (r'\b([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(20\d{2})\b',      "MoNY"),  # Jan 15 2024
-    (r'\b(\d{1,2})\s+([A-Za-z]{3,9})\s+(20\d{2})\b',        "DMoY"),  # 15 Jan 2024
+    (r'\b([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(20\d{2})\b',      "MoNY"),
+    (r'\b(\d{1,2})\s+([A-Za-z]{3,9})\s+(20\d{2})\b',        "DMoY"),
 ]
 
 _MONTH_NAMES = {
     "jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6,
     "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
-    # Full names
     "january": 1, "february": 2, "march": 3, "april": 4,
     "june": 6, "july": 7, "august": 8, "september": 9,
     "october": 10, "november": 11, "december": 12,
 }
 
 # ── Price patterns ─────────────────────────────────────────────────────────
-# Matches things like:  $12.34  12.34  $ 12.34  USD 12.34  TOTAL 12.34
-# Prefer lines that also contain "total" / "amount" / "subtotal" / "due"
-_PRICE_PATTERN = re.compile(r'(?:\$|USD|GBP|EUR|CAD|AUD)?\s*(\d{1,5}[\.,]\d{2})\b')
+# Matches things like:  $12.34  12.34  $ 12.34  USD 12.34  TOTAL 1,234.56
+# Now securely handles separated format (1,234.56) and unseparated (1234.56).
+_PRICE_PATTERN = re.compile(r'(?:\$|USD|GBP|EUR|CAD|AUD)?\s*(\d{1,3}(?:[.,]\d{3})+[.,]\d{2}|\d+[.,]\d{2})\b')
+
 _TOTAL_KEYWORDS = re.compile(
     r'\b(total|subtotal|sub[- ]total|amount|due|balance|grand|sum)\b',
     re.IGNORECASE
 )
 
 # ── Vendor heuristics ──────────────────────────────────────────────────────
-# Heuristic: the vendor name is usually in the first 1-3 lines of a receipt,
-# typically printed in all-caps and without digits.  Lines that look like
-# an address (contain street abbreviations or zip-like numbers) are skipped.
+# \d{5} was removed from _ADDRESS_RE to prevent accidental vendor truncations.
 _ADDRESS_RE = re.compile(
-    r'\b(st\.?|ave\.?|blvd\.?|rd\.?|dr\.?|hwy\.?|suite|ste\.?|floor|fl\.?|\d{5}'
+    r'\b(st\.?|ave\.?|blvd\.?|rd\.?|dr\.?|hwy\.?|suite|ste\.?|floor|fl\.?'
     r'|street|avenue|boulevard|road|drive|highway|lane|ln\.?|way|court|ct\.?'
     r'|place|pl\.?|circle|pkwy\.?|parkway)\b',
     re.IGNORECASE
@@ -298,7 +211,6 @@ _ADDRESS_RE = re.compile(
 _PHONE_RE   = re.compile(r'\(?\d{3}\)?[\s\-\.]\d{3}[\s\-\.]\d{4}')
 _URL_RE     = re.compile(r'(www\.|https?://|\.com|\.org|\.net)', re.IGNORECASE)
 
-# Ignore common receipt header fluff/marketing that aren't vendor names
 _FLUFF_RE   = re.compile(
     r'\b(give us|welcome to|thank you|thanks for|visit us|take our survey|'
     r'tell us|save money|live better|your cashier|store #|receipt|'
@@ -306,9 +218,7 @@ _FLUFF_RE   = re.compile(
     re.IGNORECASE
 )
 
-
 def _try_parse_date(line: str) -> Optional[date]:
-    """Try every date pattern against *line*; return a date object or None."""
     for pattern, fmt in _DATE_PATTERNS:
         m = re.search(pattern, line, re.IGNORECASE)
         if not m:
@@ -337,24 +247,19 @@ def _try_parse_date(line: str) -> Optional[date]:
             continue
     return None
 
-
 def _parse_receipt_lines(lines: list[str]) -> OCRResult:
-    """
-    Extract vendor, price, and date from a sorted list of OCR text lines.
-    Returns an OCRResult; any field that can't be found is left empty.
-    """
     vendor = ""
     price  = ""
     date_s = ""
 
-    # ── 1. Date: scan all lines, prefer the first match ───────────────────
+    # ── 1. Date ───────────────────────────────────────────────────────────
     for line in lines:
         d = _try_parse_date(line)
         if d is not None:
             date_s = d.strftime("%m/%d/%Y")
             break
 
-    # ── 2. Price: prefer a "total" line; fall back to the largest amount ──
+    # ── 2. Price ──────────────────────────────────────────────────────────
     best_total: Optional[float] = None
     best_total_str = ""
     largest: Optional[float] = None
@@ -364,11 +269,15 @@ def _parse_receipt_lines(lines: list[str]) -> OCRResult:
         m = _PRICE_PATTERN.search(line)
         if not m:
             continue
-        raw = m.group(1).replace(",", ".")  # handle European comma-decimal
+        
+        raw = m.group(1)
+        # Strip all thousands separators out securely before throwing to float()
+        clean_str = re.sub(r'[.,]', '', raw[:-3]) + '.' + raw[-2:]
         try:
-            val = float(raw)
+            val = float(clean_str)
         except ValueError:
             continue
+            
         if val <= 0:
             continue
         if _TOTAL_KEYWORDS.search(line):
@@ -381,13 +290,12 @@ def _parse_receipt_lines(lines: list[str]) -> OCRResult:
 
     price = best_total_str or largest_str
 
-    # ── 3. Vendor: look at the first few lines, skip noise ────────────────
-    candidate_lines = lines[:6]   # receipts almost always show the store name first
+    # ── 3. Vendor ─────────────────────────────────────────────────────────
+    candidate_lines = lines[:6]   
     for line in candidate_lines:
         stripped = line.strip()
         if not stripped:
             continue
-        # Skip phone numbers, URLs, addresses, and very short tokens
         if len(stripped) < 3:
             continue
         if _PHONE_RE.search(stripped):
@@ -398,43 +306,29 @@ def _parse_receipt_lines(lines: list[str]) -> OCRResult:
             continue
         if _FLUFF_RE.search(stripped):
             continue
-        # Skip pure-number lines (order numbers, ZIP codes, barcodes)
         if re.match(r'^[\d\s\-]+$', stripped):
             continue
-        # Skip lines that look like a price on their own
         if _PRICE_PATTERN.fullmatch(stripped) or re.match(r'^\$?\s*\d+\.\d{2}$', stripped):
             continue
-        # Skip lines that look like a date (they contain recognisable date patterns)
         if _try_parse_date(stripped) is not None:
             continue
-        # Looks like a vendor name
         vendor = stripped
         break
 
     return OCRResult(vendor=vendor, price=price, date_str=date_s, raw_lines=lines)
-
 
 # ---------------------------------------------------------------------------
 # Utility: convert between the DB's YYYY-MM-DD and the UI's mm/dd/yyyy
 # ---------------------------------------------------------------------------
 
 def to_db_date(mmddyyyy: str) -> str:
-    """
-    Convert a user-entered 'mm/dd/yyyy' string to 'YYYY-MM-DD' for the DB.
-    Raises ValueError if the input is invalid.
-    """
     try:
         d = datetime.strptime(mmddyyyy.strip(), "%m/%d/%Y")
         return d.strftime("%Y-%m-%d")
     except ValueError:
         raise ValueError(f"Date must be in mm/dd/yyyy format, got: {mmddyyyy!r}")
 
-
 def from_db_date(yyyymmdd: str) -> str:
-    """
-    Convert a DB 'YYYY-MM-DD' string to 'mm/dd/yyyy' for display.
-    Returns the original string unchanged if it can't be parsed.
-    """
     try:
         d = datetime.strptime(yyyymmdd.strip(), "%Y-%m-%d")
         return d.strftime("%m/%d/%Y")
