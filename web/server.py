@@ -1,9 +1,12 @@
 import os
+import shutil
 import sys
 import socket
 import tempfile
 import webbrowser
 import threading
+import uuid
+from flask import request, send_from_directory
 
 from core.db_manager import ReceiptVault
 from utils import update_application, DEFAULT_PORT
@@ -141,6 +144,12 @@ def run_web(host: str = "0.0.0.0", port: int | None = None, open_browser: bool =
                 deleted_count += 1
         return jsonify({"success": True, "deleted": deleted_count})
 
+    @flask_app.route('/uploads/<filename>')
+    def uploaded_file(filename):
+        # Ensure the uploads folder exists
+        upload_dir = os.path.join(os.getcwd(), 'data', 'uploads')
+        return send_from_directory(upload_dir, filename)
+    
     # --- Vendors ---
     @flask_app.route("/api/vendors", methods=["GET"])
     def get_vendors():
@@ -185,42 +194,56 @@ def run_web(host: str = "0.0.0.0", port: int | None = None, open_browser: bool =
     # --- OCR ---
     @flask_app.route("/api/scan", methods=["POST"])
     def scan_image():
-        if 'image' not in flask_request.files:
+        if 'image' not in request.files:
             return jsonify({"error": "No image provided"}), 400
-        
-        file = flask_request.files['image']
+
+        file = request.files['image']
         try:
             from core.ocr_processor import scan_receipt
             from core.image_splitter import extract_receipts
             import base64
 
-            # Save temp file
+            # Save temporary file
             temp_ext = os.path.splitext(file.filename)[1] or '.jpg'
             temp = tempfile.NamedTemporaryFile(delete=False, suffix=temp_ext)
             file.save(temp.name)
             temp.close()
-            
+
             receipt_paths = extract_receipts(temp.name)
+
+            # Ensure uploads directory exists
+            upload_dir = os.path.join(os.getcwd(), 'data', 'uploads')
+            os.makedirs(upload_dir, exist_ok=True)
 
             results = []
             for r_path in receipt_paths:
                 result = scan_receipt(r_path)
-                
-                # Convert crop to base64 to update frontend UI preview
-                with open(r_path, "rb") as img_file:
+
+                # Copy the cropped image to permanent storage
+                ext = os.path.splitext(r_path)[1] or '.png'
+                unique_name = f"{uuid.uuid4().hex}{ext}"
+                dest_path = os.path.join(upload_dir, unique_name)
+                shutil.copy2(r_path, dest_path)   # copy instead of rename
+                os.unlink(r_path)                 # remove temp file
+
+                image_url = f"/uploads/{unique_name}"
+
+                # Optional: keep base64 preview for immediate display
+                with open(dest_path, "rb") as img_file:
                     b64_str = base64.b64encode(img_file.read()).decode('utf-8')
-                mime_type = "image/png" if r_path.endswith('.png') else "image/jpeg"
+                mime_type = "image/png" if ext == '.png' else "image/jpeg"
                 data_uri = f"data:{mime_type};base64,{b64_str}"
-                
+
                 results.append({
                     "vendor": result.vendor,
                     "price": result.price,
                     "date_str": result.date_str,
-                    "image_data_uri": data_uri
+                    "image_data_uri": data_uri,
+                    "image_path": image_url
                 })
-                
-                # Clean up extracted temp file
-                os.unlink(r_path)
+
+            # Remove the original uploaded temporary file
+            os.unlink(temp.name)
 
             return jsonify({"results": results})
         except Exception as e:

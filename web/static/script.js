@@ -117,8 +117,7 @@ async function getOrCreateVendorId(name) {
 }
 
 // Unified Receipt Submission Logic
-async function processReceiptSubmission(prefix, successCallback) {
-  // Manual entry uses 'add-vendor-name', OCR uses 'ocr-vendor'
+async function processReceiptSubmission(prefix, successCallback, imagePath = null) {
   const vendorInputId = prefix === 'add' ? 'add-vendor-name' : 'ocr-vendor';
   const vendorName = document.getElementById(vendorInputId).value.trim();
   const price = document.getElementById(`${prefix}-price`).value;
@@ -129,8 +128,15 @@ async function processReceiptSubmission(prefix, successCallback) {
 
   const vId = await getOrCreateVendorId(vendorName);
   const res = await api('/api/bills', {
-    method: 'POST', headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ vendor_id: vId, price, date, category_ids: cats })
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      vendor_id: vId,
+      price,
+      date,
+      category_ids: cats,
+      image_path: imagePath   // <-- include image path if provided
+    })
   });
 
   if (res.success === false) return showToast(res.error || 'Failed to save receipt', true);
@@ -148,6 +154,8 @@ function saveManualReceipt() {
 
 function saveOCRReceipt() {
   const item = state.queue.find(q => q.id === state.currentQueueId);
+  const imagePath = (item && item.result && item.result.image_path) ? item.result.image_path : null;
+  
   processReceiptSubmission('ocr', (vendorName, price, date, cats) => {
     if (item) {
       item.saved = true;
@@ -164,7 +172,7 @@ function saveOCRReceipt() {
     } else {
       renderEditor();
     }
-  });
+  }, imagePath);   // <-- pass image path
 }
 
 // --- OCR Batch Queue ---
